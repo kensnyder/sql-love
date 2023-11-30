@@ -213,4 +213,14 @@ describe('pagination', () => {
     expect(query._limit).toBe(5);
     expect(query._offset).toBe(10);
   });
+  it('should parse OFFSET # ROWS', () => {
+    const query = new SelectBuilder('SELECT * FROM mytable OFFSET 10 ROWS');
+    expect(query._offset).toBe(10);
+  });
+  it('should parse FETCH NEXT # ROWS ONLY', () => {
+    const query = new SelectBuilder(
+      'SELECT * FROM mytable FETCH NEXT 10 ROWS ONLY'
+    );
+    expect(query._limit).toBe(10);
+  });
 });

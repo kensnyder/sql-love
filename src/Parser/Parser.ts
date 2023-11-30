@@ -79,7 +79,7 @@ export default class Parser {
    */
   _split(sql: string) {
     const splitter =
-      /(?:^|\s)(SELECT|FROM|(?:INNER|LEFT\s+OUTER|RIGHT\s+OUTER|LEFT|RIGHT|CROSS|FULL|FULL\s+OUTER)\s+JOIN|WHERE|GROUP\s+BY|HAVING|ORDER\s+BY|LIMIT|OFFSET)\b/i;
+      /(?:^|\s)(SELECT|FROM|(?:INNER|LEFT\s+OUTER|RIGHT\s+OUTER|LEFT|RIGHT|CROSS|FULL|FULL\s+OUTER)\s+JOIN|WHERE|GROUP\s+BY|HAVING|ORDER\s+BY|LIMIT|OFFSET|FETCH\s+NEXT)\b/i;
     return sql.split(splitter);
   }
 
@@ -298,6 +298,7 @@ export default class Parser {
       this.query.offset(offsetLimit[1]);
       this.query.limit(offsetLimit[2]);
     } else {
+      clause = clause.replace(/ ROWS$/i, '');
       this.query.limit(clause);
     }
   }
@@ -308,6 +309,17 @@ export default class Parser {
    * @private
    */
   _handleOFFSET(clause: string) {
+    clause = clause.replace(/^(\d+) ROWS$/i, '$1');
     this.query.offset(clause);
+  }
+
+  /**
+   * Handle OFFSET statements
+   * @param clause  The number after the OFFSET
+   * @private
+   */
+  _handleFETCH_NEXT(clause: string) {
+    clause = clause.replace(/^(\d+) ROWS ONLY$/i, '$1');
+    this.query.limit(clause);
   }
 }

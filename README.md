@@ -1,10 +1,12 @@
 # sql-love
 
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/kensnyder/sql-love?branch=master&svg=true&v=0.9.1)](https://ci.appveyor.com/project/kensnyder/sql-love)
-[![Code Coverage](https://codecov.io/gh/kensnyder//branch/master/graph/badge.svg?v=0.9.1)](https://codecov.io/gh/kensnyder/sql-love)
-[![ISC License](https://img.shields.io/github/license/kensnyder/sql-love.svg?v=0.9.1)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.1)](https://npm.com/package/any-date-parser)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.1)](https://npm.com/package/any-date-parser)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=0.9.1)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=0.9.1)](https://codecov.io/gh/kensnyder/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=0.9.1)](https://opensource.org/licenses/ISC)
 
-Classes for running SQL and building select queries for MySQL in Node
+Classes for parsing and building SQL select queries in Node
 
 ## Installation
 
@@ -19,8 +21,6 @@ npm install sql-love
   - [Building the Query](#building-the-query)
   - [Fetching Data](#fetching-data)
   - [Counting Results](#counting-results)
-  - [Set the `Db` instance](#specifying-the-db-instance-to-use)
-  - [Dependent Data](#dependent-data)
   - [Other Methods](#other-methods)
   - [new SelectBuilder() Limitations](#selectparse-limitations)
 - [How to Contribute](./CONTRIBUTING.md)
@@ -72,8 +72,44 @@ const query = new SelectBuilder(
     WHERE a.state = :state
       AND a.city IN (:city)
   `,
-  { state, city }
+  { state: 'CA', city: ['San Francisco', 'Los Angeles'] }
 );
+
+const { sql, bindings } = query.compile();
+/* 
+Then "sql" equals:
+
+SELECT u.id, u.fname, u.lname, u.email, a.city, a.zip
+FROM users
+LEFT JOIN addresses a ON a.user_id = u.id
+WHERE a.state = ?
+  AND a.city IN (?, ?)
+  
+And "bindings" equals:
+
+['CA', 'San Francisco', 'Los Angeles'] 
+*/
+```
+
+You may specify a compiler engine to use. The default is `"mysql"`.
+
+```js
+const query = new SelectBuilder('SELECT * FROM users')
+  .limit(10)
+  .page(3)
+  .where('id', 1);
+
+query.compile('mysql').sql;
+// SELECT * FROM users WHERE id = ? OFFSET 20 LIMIT 10
+
+query.compile('pg').sql;
+// SELECT * FROM users WHERE id = $1 OFFSET 20 LIMIT 10
+
+query.compile('mssql').sql;
+// SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+
+query.compile('oracle').sql;
+// SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 ```
 
 ### Building the Query
@@ -121,9 +157,13 @@ no LIMIT.
 const query = new SelectBuilder('SELECT id, name FROM users LIMIT 5');
 
 const { sql } = query.compileCount();
-// -> SELECT COUNT(*) AS found_rows FROM users
+// SELECT COUNT(*) AS found_rows FROM users
+```
 
-// with HAVING
+With queries that have a "HAVING" clause, the main query will be wrapped in a
+count query.
+
+```js
 const query = new SelectBuilder(`
   SELECT category, COUNT(*) 
   FROM posts 
@@ -148,14 +188,14 @@ SelectBuilder has a few other useful methods.
 
 - `query.getClone()` - Get an exact copy of this query object
 - `query.unjoin(tableName)` - Remove a join expression
-- `query.reset(field)` - Reset a single aspect of the query (e.g. where, having)
+- `query.reset(field)` - Reset a single aspect of the query (e.g. 'where' or 'having')
 - `query.reset(fields)` - Reset a few particular aspects of the query (e.g. \['where', 'having'\])
 - `query.reset()` - Reset query to an empty state
 
 ### Parser Limitations
 
-`new SelectBuilder()` uses regular expressions and is not a true parser. The intent
-is to be fast and useful for 99% of situations.
+`new SelectBuilder(sql)` uses regular expressions and is not a true parser.
+The goal is to be fast and useful for 99% of situations.
 
 Below are some limitations illustrated by example.
 
@@ -172,26 +212,26 @@ SELECT * FROM categories_posts WHERE category_id IN(
     )
 )`);
 
-// ✅ WILL WORK
+// ✅ WORKING EQUIVALENT
+const query = new SelectBuilder(`SELECT * FROM categories_posts`);
 const subquery =
   new SelectBuilder(`SELECT id FROM categories WHERE client_id IN(
     SELECT client_id FROM affiliations WHERE name LIKE 'test'
 )`);
-const query = new SelectBuilder(`SELECT * FROM categories_posts`);
 query.where(`category_id IN(${subquery})`);
 ```
 
 #### Keywords in Strings
 
-If you need to use keywords in strings, use bindings.
+If you need to use SQL keywords in strings, use bindings.
 
 ```js
 // ❌ WILL NOT WORK
-new SelectBuilder(`SELECT id, CONCAT('WHERE ', expr) FROM users`);
+new SelectBuilder(`SELECT id, CONCAT('where ', expr) FROM users`);
 
-// ✅ WILL WORK
+// ✅ WORKING EQUIVALENT
 new SelectBuilder(`SELECT id, CONCAT(:prefix, expr) FROM users`, {
-  prefix: 'WHERE ',
+  prefix: 'where ',
 });
 ```
 
@@ -212,7 +252,7 @@ new SelectBuilder(`
   )
 `);
 
-// ✅ WILL WORK
+// ✅ WORKING EQUIVALENT
 const query = new SelectBuilder(`SELECT * FROM users`);
 query.orWhere([
   "fname = 'Matthew' AND (lname LIKE '%john' OR lname LIKE 'john%')",

@@ -790,7 +790,7 @@ export default class SelectBuilder {
       this._limit = max;
     } else {
       throw new Error(
-        'SelectBuilder: "limit(n)" must receive a positive integer'
+        `SelectBuilder: "limit(n)" must receive a positive integer (got "${max}")`
       );
     }
     return this;
@@ -812,7 +812,7 @@ export default class SelectBuilder {
       this._offset = number;
     } else {
       throw new Error(
-        'SelectBuilder: "offset(n)" must receive a positive integer'
+        `SelectBuilder: "offset(n)" must receive a positive integer (got "${number}")`
       );
     }
     return this;
