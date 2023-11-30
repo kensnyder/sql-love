@@ -1,8 +1,8 @@
 # sql-love
 
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/kensnyder/sql-love?branch=master&svg=true&v=0.9.0)](https://ci.appveyor.com/project/kensnyder/sql-love)
-[![Code Coverage](https://codecov.io/gh/kensnyder//branch/master/graph/badge.svg?v=0.9.0)](https://codecov.io/gh/kensnyder/sql-love)
-[![ISC License](https://img.shields.io/github/license/kensnyder/sql-love.svg?v=0.9.0)](https://opensource.org/licenses/ISC)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/kensnyder/sql-love?branch=master&svg=true&v=0.9.1)](https://ci.appveyor.com/project/kensnyder/sql-love)
+[![Code Coverage](https://codecov.io/gh/kensnyder//branch/master/graph/badge.svg?v=0.9.1)](https://codecov.io/gh/kensnyder/sql-love)
+[![ISC License](https://img.shields.io/github/license/kensnyder/sql-love.svg?v=0.9.1)](https://opensource.org/licenses/ISC)
 
 Classes for running SQL and building select queries for MySQL in Node
 
