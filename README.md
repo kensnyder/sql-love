@@ -1,10 +1,10 @@
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.1)](https://npm.com/package/any-date-parser)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.1)](https://npm.com/package/any-date-parser)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=0.9.1)](https://github.com/kensnyder/sql-love/actions)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=0.9.1)](https://codecov.io/gh/kensnyder/sql-love)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=0.9.1)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.2)](https://npm.com/package/sql-love)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.2)](https://npm.com/package/sql-love)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=0.9.2)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=0.9.2)](https://codecov.io/gh/kensnyder/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=0.9.2)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node
 
@@ -19,7 +19,6 @@ npm install sql-love
 - [SelectBuilder](#selectbuilder)
   - [Parsing base SQL](#parsing-base-sql)
   - [Building the Query](#building-the-query)
-  - [Fetching Data](#fetching-data)
   - [Counting Results](#counting-results)
   - [Other Methods](#other-methods)
   - [new SelectBuilder() Limitations](#selectparse-limitations)
