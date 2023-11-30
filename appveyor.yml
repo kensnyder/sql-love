@@ -8,6 +8,7 @@ environment:
 # Install scripts. (runs after repo cloning)
 install:
   # install modules
+  - nvm install 20
   - nvm use 20
   - npm install
 
