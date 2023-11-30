@@ -1,7 +1,7 @@
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.2)](https://npm.com/package/sql-love)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.2)](https://npm.com/package/sql-love)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.2)](https://npmjs.com/package/sql-love)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.2)](https://npmjs.com/package/sql-love)
 [![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=0.9.2)](https://github.com/kensnyder/sql-love/actions)
 [![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=0.9.2)](https://codecov.io/gh/kensnyder/sql-love)
 [![ISC License](https://badgen.net/static/license/ISC/green?v=0.9.2)](https://opensource.org/licenses/ISC)
