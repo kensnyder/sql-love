@@ -600,7 +600,7 @@ describe('compileCount()', () => {
   });
   it('should handle a distinct', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
-    const { sql, bindings } = query.compileCount('DISTINCT group_id');
+    const { sql, bindings } = query.compileCount('mysql', 'DISTINCT group_id');
     expect(trim(sql)).toBe(
       'SELECT COUNT(DISTINCT group_id) AS found_rows FROM posts'
     );
