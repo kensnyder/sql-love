@@ -187,10 +187,10 @@ export default class SelectBuilder {
 
   /**
    * Get SQL needed to return the found rows of this query
-   * @param countExpr  The expression to use inside the COUNT()
    * @param engineStyle  The database engine style (mssql, mysql, oracle, pg)
+   * @param countExpr  The expression to use inside the COUNT()
    */
-  compileCount(countExpr: string = '*', engineStyle: EngineStyle = 'mysql') {
+  compileCount(engineStyle: EngineStyle = 'mysql', countExpr: string = '*') {
     const query = this.getFoundRowsQuery(countExpr);
     const { sql, bindings } = query.compile(engineStyle);
     if (this._havings.length === 0) {
@@ -580,7 +580,7 @@ export default class SelectBuilder {
     }
     operator = operator.toLocaleUpperCase();
     const likeMatch = operator.match(
-      /^(LIKE|NOT LIKE)(?: (\?|\?%|%\?|%\?%))?$/i
+      /^(LIKE|NOT LIKE|ILIKE|NOT ILIKE)(?: (\?|\?%|%\?|%\?%))?$/i
     );
     if (operator === 'NOT BETWEEN' || operator === 'BETWEEN') {
       // expect a two-item array
@@ -591,7 +591,7 @@ export default class SelectBuilder {
       );
       this._bindings.push(value[0], value[1]);
     } else if (likeMatch) {
-      const like = likeMatch[1].toUpperCase(); // Either LIKE or NOT LIKE
+      const like = likeMatch[1].toUpperCase(); // Either "LIKE", "NOT LIKE" etc.
       const infix = likeMatch[2] || '?'; // ONE OF ?% or %?% or %? or ?
       if (Array.isArray(value)) {
         const ors = [];
@@ -841,5 +841,11 @@ export default class SelectBuilder {
       );
     }
     return this;
+  }
+
+  fetch(engine) {
+    if (engine.$queryRawUnsafe) {
+      //
+    }
   }
 }

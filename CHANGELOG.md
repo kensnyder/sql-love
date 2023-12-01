@@ -1,5 +1,9 @@
 ## Change Log
 
+### v0.9.3 - 30 Nov 2023
+
+- Support parsing and building "ILIKE" and "NOT ILIKE"
+
 ### v0.9.2 - 30 Nov 2023
 
 - Fixes to readme
