@@ -12,7 +12,7 @@ interface PrismaClient {
 export async function runPrisma(
   prisma: PrismaClient,
   query: SelectBuilder,
-  { engine = 'mysql' }: { engine?: EngineStyle } = {}
+  { engine = undefined }: { engine?: EngineStyle } = {}
 ): Promise<Array<Record<string, any>>> {
   const { sql, bindings } = query.compile({ engine });
   return prisma.$queryRawUnsafe(sql, ...bindings);
@@ -22,7 +22,7 @@ export async function runPrismaWithCount(
   prisma: PrismaClient,
   query: SelectBuilder,
   {
-    engine = 'mysql',
+    engine = undefined,
     countExpr = '*',
   }: { engine?: EngineStyle; countExpr?: string } = {}
 ) {

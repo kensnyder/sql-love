@@ -139,6 +139,7 @@ describe('runMysql', () => {
       .limit(2)
       .page(5);
     const { records, total, pagination, fields } = await runMysqlAsyncWithCount(
+      // @ts-expect-error
       client,
       query
     );
