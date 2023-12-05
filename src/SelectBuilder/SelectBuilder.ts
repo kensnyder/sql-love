@@ -33,6 +33,8 @@ export type WhereCriteria =
 
 const isNullish = v => v === undefined || v === null || v === false || isNaN(v);
 
+let defaultEngine: EngineStyle = 'mysql';
+
 /**
  * Build a select query
  * Class Select
@@ -120,11 +122,26 @@ export default class SelectBuilder {
   }
 
   /**
+   * Set the default database engine style (mssql, mysql, oracle, pg)
+   * @param engine
+   */
+  static setDefaultEngine(engine: EngineStyle) {
+    defaultEngine = engine;
+    return SelectBuilder;
+  }
+
+  /**
    * Get the SQL as a pretty-printed string alongside an array of bindings
-   * @param engineStyle  The database engine style (mssql, mysql, oracle, pg)
+   * @param engine  The database engine style (mssql, mysql, oracle, pg)
    * @return The SQL query as a string
    */
-  compile(engineStyle: EngineStyle = 'mysql') {
+  compile({
+    engine = defaultEngine,
+    bindingIndex = 1,
+  }: {
+    engine?: EngineStyle;
+    bindingIndex?: number;
+  } = {}) {
     // build all the lines
     const lines = [
       'SELECT',
@@ -139,28 +156,28 @@ export default class SelectBuilder {
     ];
     if (this._page > 0) {
       const offset = (this._page - 1) * this._limit;
-      lines.push(this._compileOFFSET(engineStyle, offset));
-      lines.push(this._compileLIMIT(engineStyle, this._limit));
+      lines.push(this._compileOFFSET(engine, offset));
+      lines.push(this._compileLIMIT(engine, this._limit));
     } else {
       if (this._offset) {
-        lines.push(this._compileOFFSET(engineStyle, this._offset));
+        lines.push(this._compileOFFSET(engine, this._offset));
       }
       if (this._limit) {
-        lines.push(this._compileLIMIT(engineStyle, this._limit));
+        lines.push(this._compileLIMIT(engine, this._limit));
       }
     }
 
     const pretty = lines.filter(Boolean).join('\n').trim();
     let replacer: (match0: string, match1: string) => string;
     const bindings: any = [];
-    if (engineStyle === 'pg') {
-      let idx = 1;
-      replacer = ($0, $1) => {
+    if (engine === 'pg') {
+      let idx = bindingIndex;
+      replacer = (_, $1) => {
         bindings.push(this._bindings[$1]);
         return '$' + idx++;
       };
     } else {
-      replacer = ($0, $1) => {
+      replacer = (_, $1) => {
         bindings.push(this._bindings[$1]);
         return '?';
       };
@@ -190,9 +207,17 @@ export default class SelectBuilder {
    * @param engineStyle  The database engine style (mssql, mysql, oracle, pg)
    * @param countExpr  The expression to use inside the COUNT()
    */
-  compileCount(engineStyle: EngineStyle = 'mysql', countExpr: string = '*') {
+  compileCount({
+    countExpr = '*',
+    engine = defaultEngine,
+    bindingIndex = 1,
+  }: {
+    countExpr?: string;
+    engine?: EngineStyle;
+    bindingIndex?: number;
+  } = {}) {
     const query = this.getFoundRowsQuery(countExpr);
-    const { sql, bindings } = query.compile(engineStyle);
+    const { sql, bindings } = query.compile({ engine, bindingIndex });
     if (this._havings.length === 0) {
       return { sql, bindings };
     } else {
@@ -202,6 +227,32 @@ export default class SelectBuilder {
         bindings,
       };
     }
+  }
+
+  /**
+   * Get SQL needed to union this query with another
+   * @param query  The query to union
+   * @param engine  The database engine style (mssql, mysql, oracle, pg)
+   */
+  compileUnion(
+    query: SelectBuilder,
+    {
+      engine = defaultEngine,
+      bindingIndex = 1,
+    }: {
+      engine?: EngineStyle;
+      bindingIndex?: number;
+    } = {}
+  ) {
+    const first = this.compile({ engine, bindingIndex });
+    const second = query.compile({
+      engine,
+      bindingIndex: first.bindings.length + bindingIndex,
+    });
+    return {
+      sql: `(${first.sql})\nUNION\n(${second.sql})`,
+      bindings: [...first.bindings, ...second.bindings],
+    };
   }
 
   /**
@@ -676,13 +727,23 @@ export default class SelectBuilder {
    * Add a series of WHERE clauses joined by OR (See _conditions for usage)
    * @param conditions
    */
-  _orConditions(conditions: WhereCriteria[] | Record<string, any>[]) {
+  _orConditions(
+    conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
+  ) {
     const items = [];
-    for (const condition of conditions) {
-      if (Array.isArray(condition)) {
-        this._conditions(items, condition as WhereCriteria);
-      } else {
-        this._conditions(items, [condition]);
+    if (Array.isArray(conditions)) {
+      for (const condition of conditions) {
+        if (Array.isArray(condition)) {
+          this._conditions(items, condition as WhereCriteria);
+        } else {
+          this._conditions(items, [condition]);
+        }
+      }
+    } else {
+      for (const [key, value] of Object.entries(conditions)) {
+        const one = [];
+        this._conditions(one, [key, value]);
+        items.push(one[0]);
       }
     }
     const joined = items.join(' OR ');
@@ -698,7 +759,9 @@ export default class SelectBuilder {
    * Add WHERE conditions to place inside an OR block (See _conditions for usage)
    * @param conditions  A list or object where each item is an array with parameters that would be taken by where()
    */
-  orWhere(conditions: WhereCriteria[] | Record<string, any>[]) {
+  orWhere(
+    conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
+  ) {
     const joined = this._orConditions(conditions);
     this.where(`(${joined})`);
     return this;
@@ -708,7 +771,9 @@ export default class SelectBuilder {
    * Add an OR with conditions under the HAVING clause
    * @param conditions  A list or object where each item is an array with parameters that would be taken by having()
    */
-  orHaving(conditions: WhereCriteria[] | Record<string, any>[]) {
+  orHaving(
+    conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
+  ) {
     const joined = this._orConditions(conditions);
     this.having(`(${joined})`);
     return this;
@@ -841,11 +906,5 @@ export default class SelectBuilder {
       );
     }
     return this;
-  }
-
-  fetch(engine) {
-    if (engine.$queryRawUnsafe) {
-      //
-    }
   }
 }

@@ -20,12 +20,21 @@ npm install sql-love
 
 - [SelectBuilder](#selectbuilder)
   - [Parsing base SQL](#parsing-base-sql)
+  - [SQL injection](#sql-injection)
   - [Building the Query](#building-the-query)
-  - [Counting Results](#counting-results)
-  - [Other Methods](#other-methods)
-  - [new SelectBuilder() Limitations](#selectparse-limitations)
-- [How to Contribute](./CONTRIBUTING.md)
-- [ISC License](./LICENSE.md)
+  - [More examples](#where-examples)
+  - [Counting results](#counting-results)
+  - [Other methods](#other-methods)
+  - [new SelectBuilder() limitations](#selectparse-limitations)
+- [Utility functions](#utility-functions)
+  - [getPagination](#getpagination)
+  - [extractGrouped](#extractGrouped)
+  - [extractIndexed](#extractIndexed)
+  - [runMysql and runPrismaWithCount](#runPrisma-and-runPrismaWithCount)
+  - [runMysql and runMysqlWithCount](#runMysql-and-runMysqlWithCount)
+  - [runPg and runPgWithCount](#runPg-and-runPgWithCount)
+- [How to contribute](./CONTRIBUTING.md)
+- [ISC license](./LICENSE.md)
 
 ## SelectBuilder
 
@@ -37,7 +46,8 @@ clauses including JOIN, WHERE, ORDER BY, LIMIT, OFFSET.
 You can define a base query and pass it to the SelectBuilder constructor.
 
 ```js
-const { SelectBuilder } = require('sql-love');
+import { SelectBuilder } from 'sql-love';
+
 const query = new SelectBuilder(`
   SELECT u.id, u.fname, u.lname, u.email, p.phone
   FROM users
@@ -60,11 +70,16 @@ const { sql, bindings } = query.compile();
 connection.query(sql, bindings, (err, results, fields) => {});
 // or Prisma
 const result = await prisma.$queryRawUnsafe(sql, ...bindings);
+
+// Note that these are prepared statements so the values in the "bindings"
+//   array are safe from SQL injection.
 ```
 
 It is possible to add placeholders to the base query.
 
 ```js
+import { SelectBuilder } from 'sql-love';
+
 const query = new SelectBuilder(
   `
     SELECT u.id, u.fname, u.lname, u.email, a.city, a.zip
@@ -95,27 +110,42 @@ And "bindings" equals:
 You may specify a compiler engine to use. The default is `"mysql"`.
 
 ```js
+import { SelectBuilder } from 'sql-love';
+
 const query = new SelectBuilder('SELECT * FROM users')
   .limit(10)
   .page(3)
   .where('id', 1);
 
-query.compile('mysql').sql;
+query.compile({ engine: 'mysql' }).sql;
 // SELECT * FROM users WHERE id = ? OFFSET 20 LIMIT 10
 
-query.compile('pg').sql;
+query.compile({ engine: 'pg' }).sql;
 // SELECT * FROM users WHERE id = $1 OFFSET 20 LIMIT 10
 
-query.compile('mssql').sql;
+query.compile({ engine: 'mssql' }).sql;
 // SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 
-query.compile('oracle').sql;
+query.compile({ engine: 'oracle' }).sql;
 // SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+
+// Or you can specify the default engine to use in the compile function
+SelectBuilder.setDefaultEngine('pg');
 ```
 
-### Building the Query
+### SQL injection
 
-Use the following methods to build queries.
+You should use prepared statements to run the sql and bindings returned by
+`SelectBuilder.compile()`. This will protect you from SQL injection.
+
+Even though `prisma.$queryRawUnsafe()` implies that the query is unsafe,
+execute with the "sql", and "bindings" is actually safe because it uses prepared
+statements.
+
+### Building the query
+
+Use the following methods to build queries. And see
+[more examples below](#where-examples).
 
 - `query.where(column, operator, value)` - Require column satisfy operator
 - `query.where(column, value)` - Require column equal a value
@@ -148,7 +178,94 @@ Use the following methods to build queries.
 - `query.rightOuterJoin(expression)` - Add a RIGHT OUTER JOIN expression
 - `query.groupBy(column)` - Group by a column or expression
 
-### Counting Results
+### More examples
+
+```js
+// The following are equivalent
+query.where('deleted_at', '=', null);
+query.where('deleted_at', '=', undefined);
+query.where('deleted_at', null);
+query.where('deleted_at', undefined);
+query.where('deleted_at IS NULL');
+query.where({ deleted_at: null });
+query.where({ deleted_at: undefined });
+
+// the following demonstrate ways to use LIKE
+query.where('name', 'LIKE', 'son');
+query.where('name', 'LIKE ?', 'son');
+query.where('name', 'LIKE ?%', 'son');
+query.where('name', 'LIKE %?', 'son');
+query.where('name', 'LIKE %?%', 'son');
+query.where('name', 'LIKE', '%son%');
+
+// The following demonstrate ways to use various operators
+query.where('price', '=', 100);
+query.where('price', '!=', 100);
+query.where('price', '<>', 100);
+query.where('price', '>', 100);
+query.where({ 'price >': 100 });
+query.where('price', 'BETWEEN', [100, 200]);
+query.where('price', 'NOT BETWEEN', [100, 200]);
+query.whereBetween('price', [100, 200]); // price BETWEEN 100 AND 200
+query.whereBetween('price', [100, null]); // price > 100
+query.whereBetween('price', [null, 200]); // price < 200
+query.whereBetween('price', [null, null]); // clause is ignored
+
+// The following demonstrate ways to use IN and NOT IN
+query.where('status', 'IN', ['pending', 'approved']);
+query.where('status', ['pending', 'approved']);
+query.where('status', '=', ['pending', 'approved']);
+query.where('status', '!=', ['pending', 'approved']);
+query.where('status', 'NOT IN', ['pending', 'approved']);
+query.where({ status: ['pending', 'approved'] });
+query.where({ 'status NOT IN': ['pending', 'approved'] });
+query.where({ 'status !=': ['pending', 'approved'] });
+query.where({ 'status <>': ['pending', 'approved'] });
+// Note: .having() supports the same signatures as .where()
+
+// The following demonstrates using objects to specify multiple conditions
+query.where({
+  deleted_at: null,
+  'price >': 100,
+  'price <': 200,
+  color: ['blue', 'black'],
+  'stars BETWEEN': [4, 5],
+  conditions: ['new', 'used'],
+});
+
+// The following demonstrate equivalent ways to use OR
+query.orWhere([{ approved_at: null }, { denied_at: null }]);
+query.orWhere({ approved_at: null, denied_at: null });
+query.orWhere(['approved_at IS NULL', 'denied_at IS NULL']);
+query.orWhere([
+  ['approved_at', null],
+  ['denied_at =', null],
+]);
+query.where('(approved_at IS NULL OR denied_at IS NULL)');
+// Note: .orHaving() supports the same signatures as .orWhere()
+
+// The following demonstrate joins
+query.innerJoin('phone_numbers p ON p.user_id = u.id');
+query.leftJoin('phone_numbers p ON p.user_id = u.id AND p.type = ?', ['main']);
+query.outerJoin('phone_numbers p ON p.user_id = u.id AND p.type NOT IN(?, ?)', [
+  'home',
+  'cell',
+]);
+
+// The following demonstrates pagination
+query.limit(10).page(3); // LIMIT 10 OFFSET 20
+
+// The following demonstrates cloning
+const query1 = new SelectBuilder();
+query1.where('email', 'john@example.com');
+const query2 = query1.getClone();
+query1.table('users');
+query2.table('contacts');
+query1.compile().sql; // SELECT * FROM users WHERE email = ?
+query2.compile().sql; // SELECT * FROM contacts WHERE email = ?
+```
+
+### Counting results
 
 One powerful feature of SelectBuilder is that it can construct a count query
 to determine the number of results that would have been returned if there were
@@ -159,6 +276,9 @@ const query = new SelectBuilder('SELECT id, name FROM users LIMIT 5');
 
 const { sql } = query.compileCount();
 // SELECT COUNT(*) AS found_rows FROM users
+
+const { sql } = query.compileCount({ countExpr: 'DISTINCT externalId' });
+// SELECT COUNT(DISTINCT externalId) AS found_rows FROM users
 ```
 
 With queries that have a "HAVING" clause, the main query will be wrapped in a
@@ -193,14 +313,14 @@ SelectBuilder has a few other useful methods.
 - `query.reset(fields)` - Reset a few particular aspects of the query (e.g. \['where', 'having'\])
 - `query.reset()` - Reset query to an empty state
 
-### Parser Limitations
+### Parser limitations
 
 `new SelectBuilder(sql)` uses regular expressions and is not a true parser.
 The goal is to be fast and useful for 99% of situations.
 
 Below are some limitations illustrated by example.
 
-#### Nested Subqueries
+#### Nested subqueries
 
 Most subqueries can be parsed but sub-subqueries don't work.
 
@@ -215,14 +335,13 @@ SELECT * FROM categories_posts WHERE category_id IN(
 
 // ✅ WORKING EQUIVALENT
 const query = new SelectBuilder(`SELECT * FROM categories_posts`);
-const subquery =
-  new SelectBuilder(`SELECT id FROM categories WHERE client_id IN(
-    SELECT client_id FROM affiliations WHERE name LIKE 'test'
-)`);
+const subquery = `SELECT id FROM categories WHERE client_id IN(
+  SELECT client_id FROM affiliations WHERE name LIKE 'test'
+)`;
 query.where(`category_id IN(${subquery})`);
 ```
 
-#### Keywords in Strings
+#### Keywords in strings
 
 If you need to use SQL keywords in strings, use bindings.
 
@@ -236,7 +355,7 @@ new SelectBuilder(`SELECT id, CONCAT(:prefix, expr) FROM users`, {
 });
 ```
 
-#### Nested OR and AND Clauses
+#### Nested OR and AND clauses
 
 Nested logic can't be parsed properly.
 
@@ -260,3 +379,110 @@ query.orWhere([
   'id > 0 AND is_active IS NOT NULL',
 ]);
 ```
+
+## Utility functions
+
+There are several utility functions bundled with this library.
+
+### getPagination
+
+You can get detailed page and limit information from a query.
+
+```js
+import { SelectBuilder, getPagination } from 'sql-love';
+
+const query = new SelectBuilder('SELECT * FROM users').limit(10).page(1);
+// ...
+// run a count query to determine that there are 42 results
+const pagination = getPagination(query, 42);
+expect(pagination).toEqual({
+  page: 1,
+  prevPage: null,
+  nextPage: 2,
+  perPage: 10,
+  numPages: 5,
+  total: 42,
+  isFirst: true,
+  isLast: false,
+});
+```
+
+### extractIndexed
+
+You can index a results set by a particular field.
+
+```js
+import { extractIndexed } from 'sql-love';
+
+const records = [
+  { id: 1, name: 'John' },
+  { id: 2, name: 'Jane' },
+];
+const indexed = extractIndexed('id', records);
+/*
+{
+  1: { id: 1, name: 'John' },
+  2: { id: 2, name: 'Jane' },
+});
+*/
+```
+
+### extractGrouped
+
+You can divide a results set into groups based on a particular field.
+
+```js
+import { extractGrouped } from 'sql-love';
+
+const records = [
+  { id: 1, name: 'John', dept: 'Marketing' },
+  { id: 2, name: 'Jane', dept: 'Finance' },
+  { id: 3, name: 'Tim', dept: 'Marketing' },
+];
+const grouped = extractGrouped('dept', records);
+/*
+{
+  Marketing: [
+    { id: 1, name: 'John', dept: 'Marketing' },
+    { id: 3, name: 'Tim', dept: 'Marketing' },
+  ],
+  Finance: [{ id: 2, name: 'Jane', dept: 'Finance' }],
+}
+*/
+```
+
+### runPrisma and runPrismaWithCount
+
+`runPrisma()` will run a query using Prisma and return the results.
+
+```js
+import { SelectBuilder, runPrisma, runPrismaWithCount } from 'sql-love';
+import { prisma } from '~/db.server';
+
+const query = new SelectBuilder('SELECT * FROM users');
+query.where('dept', 'Marketing');
+
+const rows = runPrisma(prisma, query, { engine: 'pg' });
+```
+
+`runPrismaWithCount()` will run a query using Prisma and return the results,
+found rows and pagination.
+
+```js
+import { SelectBuilder, runPrisma, runPrismaWithCount } from 'sql-love';
+import { prisma } from '~/db.server';
+
+const query = new SelectBuilder('SELECT * FROM users')
+  .where('dept', 'Marketing')
+  .limit(2)
+  .page(5);
+const { records, total, pagination } = await runPrismaWithCount(prisma, query, {
+  engine: 'pg',
+});
+```
+
+See [getPagination](#getpagination) for details on the pagination object.
+
+### runMysql and runMysqlWithCount
+
+### runPg and runPgWithCount

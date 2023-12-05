@@ -31,7 +31,7 @@ describe('where() with arguments', () => {
         id: 123,
       }
     );
-    const { sql, bindings } = query.compile('pg');
+    const { sql, bindings } = query.compile({ engine: 'pg' });
     expect(trim(sql)).toBe('SELECT * FROM users WHERE id = $1 AND age >= $2');
     expect(bindings).toEqual([123, 18]);
   });
@@ -263,6 +263,14 @@ describe('orWhere()', () => {
     const query = new SelectBuilder();
     query.table('users');
     query.orWhere([{ 'a >': 1 }, { b: 2 }]);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users WHERE (a > ? OR b = ?)');
+    expect(bindings).toEqual([1, 2]);
+  });
+  it('should handle an object', () => {
+    const query = new SelectBuilder();
+    query.table('users');
+    query.orWhere({ 'a >': 1, b: 2 });
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM users WHERE (a > ? OR b = ?)');
     expect(bindings).toEqual([1, 2]);
@@ -520,7 +528,7 @@ describe('LIMIT and OFFSET', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
     query.limit(2);
     query.offset(4);
-    const { sql, bindings } = query.compile('mssql');
+    const { sql, bindings } = query.compile({ engine: 'mssql' });
     expect(trim(sql)).toBe(
       'SELECT * FROM posts OFFSET 4 ROWS FETCH NEXT 2 ROWS ONLY'
     );
@@ -600,7 +608,10 @@ describe('compileCount()', () => {
   });
   it('should handle a distinct', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
-    const { sql, bindings } = query.compileCount('mysql', 'DISTINCT group_id');
+    const { sql, bindings } = query.compileCount({
+      countExpr: 'DISTINCT group_id',
+      engine: 'mysql',
+    });
     expect(trim(sql)).toBe(
       'SELECT COUNT(DISTINCT group_id) AS found_rows FROM posts'
     );
@@ -627,6 +638,23 @@ describe('compileCount()', () => {
   });
 });
 
+describe('compileUnion()', () => {
+  it('should error on non-number', () => {
+    const query1 = new SelectBuilder(
+      'SELECT first, last, email FROM users WHERE org = :org AND group = :group',
+      { org: 'ACME', group: 2 }
+    );
+    const query2 = new SelectBuilder(
+      'SELECT first, last, email FROM contacts WHERE org = :org AND group = :group',
+      { org: 'ACME', group: 2 }
+    );
+    const { sql, bindings } = query1.compileUnion(query2, { engine: 'pg' });
+    expect(trim(sql)).toBe(
+      `(SELECT first, last, email FROM users WHERE org = $1 AND group = $2) UNION (SELECT first, last, email FROM contacts WHERE org = $3 AND group = $4)`
+    );
+    expect(bindings).toEqual(['ACME', 2, 'ACME', 2]);
+  });
+});
 describe('reset()', () => {
   it('should reset all', () => {
     const query = new SelectBuilder('SELECT id FROM a');
@@ -737,5 +765,21 @@ describe('tables()', () => {
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM users, groups');
     expect(bindings).toEqual([]);
+  });
+});
+describe('setDefaultEngine()', () => {
+  it('should set ok', () => {
+    SelectBuilder.setDefaultEngine('pg');
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('id', 123);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users WHERE id = $1');
+    expect(bindings).toEqual([123]);
+
+    // and set engine to something else then compile again
+    SelectBuilder.setDefaultEngine('oracle');
+    const compiled = query.compile();
+    expect(trim(compiled.sql)).toBe('SELECT * FROM users WHERE id = ?');
+    expect(compiled.bindings).toEqual([123]);
   });
 });
