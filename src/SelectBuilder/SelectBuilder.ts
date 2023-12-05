@@ -809,16 +809,20 @@ export default class SelectBuilder {
 
   /**
    * Sort by the given column, with a map of columns to translate
-   * @param column  The column name such as "created_at" or "-created_at" for descending
-   * @param [mapNames]  Column names to translate from one name to another
+   * @param fieldName  The file name such as "created_at" or "-created_at" for descending
+   * @param [mapNames]  Column names to translate from field to column expression
    * @example
    *   query.sortField('-modified_at'); // ORDER BY modified_at DESC
-   *   query.sortField('created_at', {'created_at': 'created'}); // ORDER BY created
+   *   query.sortField('-created', {'created': 'created_at'}); // ORDER BY created_at DESC
    */
-  sortField(column: string, mapNames: Record<string, string> = {}) {
-    column.replace(/^-(.+)/, '$1 DESC');
-    column = mapNames[column] || column;
-    this.orderBy(column);
+  sortField(fieldName: string, mapNames: Record<string, string> = {}) {
+    let direction = 'ASC' as 'ASC' | 'DESC';
+    if (fieldName.startsWith('-')) {
+      direction = 'DESC';
+      fieldName = fieldName.slice(1);
+    }
+    const column = mapNames[fieldName] || fieldName;
+    this.orderBy(column, direction);
     return this;
   }
 

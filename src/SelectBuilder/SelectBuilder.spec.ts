@@ -450,7 +450,7 @@ describe('sortField()', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
     query.sortField('posts.created_at');
     const { sql, bindings } = query.compile();
-    expect(trim(sql)).toBe('SELECT * FROM posts ORDER BY posts.created_at');
+    expect(trim(sql)).toBe('SELECT * FROM posts ORDER BY posts.created_at ASC');
     expect(bindings).toEqual([]);
   });
   it('should handle minus signs', () => {
@@ -464,12 +464,12 @@ describe('sortField()', () => {
   });
   it('should handle mapping', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
-    query.sortField('created_at', {
+    query.sortField('-created_at', {
       created_at: 'posts.created_timestamp',
     });
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe(
-      'SELECT * FROM posts ORDER BY posts.created_timestamp'
+      'SELECT * FROM posts ORDER BY posts.created_timestamp DESC'
     );
     expect(bindings).toEqual([]);
   });

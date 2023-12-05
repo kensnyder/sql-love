@@ -1,10 +1,11 @@
 ## Change Log
 
-### v0.9.5 - 5 Dec 2023
+### v0.9.6 - 5 Dec 2023
 
 - Utility functions (extractGrouped, extractIndexed, getPagination, runPrisma, runMysql)
 - Added `SelectBuilder.setDefaultEngine(engine)`
 - More documentation
+- Fix `.sortField()` logic
 
 ### v0.9.4 - 30 Nov 2023
 
