@@ -64,4 +64,36 @@ describe('runPrisma', () => {
       isLast: true,
     });
   });
+  it('should handle when recordset is empty', async () => {
+    const prisma = {
+      $queryRawUnsafe: vi.fn(() => []),
+    };
+    const query = new SelectBuilder('SELECT * FROM users')
+      .where('dept', 'Marketing')
+      .limit(2)
+      .page(5);
+    const { records, total, pagination } = await runPrismaWithCount(
+      // @ts-expect-error
+      prisma,
+      query
+    );
+    // @ts-expect-error
+    expect(prisma.$queryRawUnsafe.mock.calls[0][0]).toBe(
+      'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
+    );
+    // @ts-expect-error
+    expect(prisma.$queryRawUnsafe.mock.calls[0][1]).toBe('Marketing');
+    expect(records).toStrictEqual([]);
+    expect(total).toBe(0);
+    expect(pagination).toEqual({
+      page: null,
+      prevPage: null,
+      nextPage: null,
+      perPage: 2,
+      numPages: 0,
+      total: 0,
+      isFirst: false,
+      isLast: false,
+    });
+  });
 });

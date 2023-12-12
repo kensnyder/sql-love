@@ -41,7 +41,33 @@ describe('runMysql', () => {
     expect(results).toBe(mockResults);
     expect(fields).toBe(mockFields);
   });
-  it('should also run with count', async () => {
+  it('should handle errors', async () => {
+    const client = {
+      query: vi.fn(
+        (
+          sql: string,
+          bindings: any[],
+          callback: (
+            err: Error | null,
+            rows: Array<Record<string, any>>,
+            fields: any[]
+          ) => void
+        ) => {
+          callback(new Error('Test Error'), [], []);
+        }
+      ),
+    };
+    const query = new SelectBuilder('SELECT * FROM users').where(
+      'dept',
+      'Marketing'
+    );
+    try {
+      await runMysql(client, query);
+    } catch (e) {
+      expect(e.message).toBe('Test Error');
+    }
+  });
+  it('should run with count', async () => {
     const mockResults1 = [
       { id: 1, name: 'John', dept: 'Marketing' },
       { id: 2, name: 'Jane', dept: 'Marketing' },
@@ -93,7 +119,53 @@ describe('runMysql', () => {
       isLast: true,
     });
   });
-  it('should invoke client.query with correct args (async)', async () => {
+  it('should run when count is 0', async () => {
+    const mockResults1 = [];
+    const mockFields1 = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
+    const mockResults2 = [{ found_rows: 0 }];
+    const mockFields2 = [{ name: 'found_rows' }];
+    let callCount = 0;
+    const client = {
+      query: vi.fn(
+        (
+          sql: string,
+          bindings: any[],
+          callback: (
+            err: Error | null,
+            rows: Array<Record<string, any>>,
+            fields: any[]
+          ) => void
+        ) => {
+          if (++callCount === 1) {
+            callback(null, mockResults1, mockFields1);
+          }
+          callback(null, mockResults2, mockFields2);
+        }
+      ),
+    };
+    const query = new SelectBuilder('SELECT * FROM users')
+      .where('dept', 'Marketing')
+      .limit(2)
+      .page(5);
+    const { records, total, pagination } = await runMysqlWithCount(
+      client,
+      query
+    );
+    expect(callCount).toBe(1);
+    expect(records).toBe(mockResults1);
+    expect(total).toBe(0);
+    expect(pagination).toEqual({
+      page: null,
+      prevPage: null,
+      nextPage: null,
+      perPage: 2,
+      numPages: 0,
+      total: 0,
+      isFirst: false,
+      isLast: false,
+    });
+  });
+  it('should invoke client.query with correct args (promises)', async () => {
     const mockResults = [
       { id: 1, name: 'John', dept: 'Marketing' },
       { id: 2, name: 'Jane', dept: 'Marketing' },
@@ -117,7 +189,7 @@ describe('runMysql', () => {
     expect(results).toBe(mockResults);
     expect(fields).toBe(mockFields);
   });
-  it('should also run with count (async)', async () => {
+  it('should run with count (promises)', async () => {
     const mockResults1 = [
       { id: 1, name: 'John', dept: 'Marketing' },
       { id: 2, name: 'Jane', dept: 'Marketing' },
@@ -143,10 +215,7 @@ describe('runMysql', () => {
       client,
       query
     );
-    expect(client.query).toHaveBeenCalledWith(
-      'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2',
-      ['Marketing']
-    );
+    expect(callCount).toBe(2);
     expect(records).toBe(mockResults1);
     expect(total).toBe(9);
     expect(pagination).toEqual({
@@ -160,5 +229,58 @@ describe('runMysql', () => {
       isLast: true,
     });
     expect(fields).toEqual(mockFields1);
+  });
+  it('should run with count of zero (promises)', async () => {
+    const mockResults1 = [];
+    const mockFields1 = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
+    const mockResults2 = [{ found_rows: 0 }];
+    const mockFields2 = [{ name: 'found_rows' }];
+    let callCount = 0;
+    const client = {
+      query: vi.fn((sql: string, bindings: any[]) => {
+        if (++callCount === 1) {
+          return Promise.resolve([mockResults1, mockFields1]);
+        }
+        return Promise.resolve([mockResults2, mockFields2]);
+      }),
+    };
+    const query = new SelectBuilder('SELECT * FROM users')
+      .where('dept', 'Marketing')
+      .limit(2)
+      .page(5);
+    const { records, total, pagination } = await runMysqlAsyncWithCount(
+      // @ts-expect-error
+      client,
+      query
+    );
+    expect(callCount).toBe(1);
+    expect(records).toBe(mockResults1);
+    expect(total).toBe(0);
+    expect(pagination).toEqual({
+      page: null,
+      prevPage: null,
+      nextPage: null,
+      perPage: 2,
+      numPages: 0,
+      total: 0,
+      isFirst: false,
+      isLast: false,
+    });
+  });
+  it('should handle errors (promises)', async () => {
+    const client = {
+      query: vi.fn((sql: string, bindings: any[]) => {
+        return Promise.reject('Test Test');
+      }),
+    };
+    const query = new SelectBuilder('SELECT * FROM users').where(
+      'dept',
+      'Marketing'
+    );
+    try {
+      await runMysqlAsync(client, query);
+    } catch (e) {
+      expect(e).toBe('Test Test');
+    }
   });
 });

@@ -37,6 +37,11 @@ function _queryToPromise(
   });
 }
 
+/**
+ * Run the given query with mysql and return the results
+ * @param mysqlClient  A client created with mysql.createConnection()  or mysql.createPool()
+ * @param query  The SelectBuilder query to run
+ */
 export async function runMysql(
   mysqlClient: MysqlClient,
   query: SelectBuilder
@@ -45,6 +50,13 @@ export async function runMysql(
   return _queryToPromise(mysqlClient, sql, bindings);
 }
 
+/**
+ * Run the given query with mysql and return the results, count, and pagination
+ * @param mysqlClient  A client created with mysql.createConnection()  or mysql.createPool()
+ * @param query  The SelectBuilder query to run
+ * @param options
+ * @param options.countExpr  The SQL expression to use for the count (default "*")
+ */
 export async function runMysqlWithCount(
   mysqlClient: MysqlClient,
   query: SelectBuilder,

@@ -1,5 +1,17 @@
 ## Change Log
 
+### v1.0.0 - 12 Dec 2023
+
+- Upgrade to vitest v1
+- More documentation
+- 100% test coverage
+- First stable release
+
+### v0.9.7 - 7 Dec 2023
+
+- Added extractLookup utility
+- Added toSafeJson utilities
+
 ### v0.9.6 - 5 Dec 2023
 
 - Utility functions (extractGrouped, extractIndexed, getPagination, runPrisma, runMysql)

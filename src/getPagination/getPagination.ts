@@ -10,13 +10,25 @@ export default function getPagination(
   total: BigInt | number
 ) {
   total = Number(total) || 0;
-  const page = Number(query._page) || 1;
-  const perPage = Number(query._limit);
-  const numPages = Math.ceil(total / perPage) || 0;
+  const perPage = Number(query._limit) || null;
+  let page: number | null = null;
+  if (total === 0) {
+    page = null;
+  } else if (query._page) {
+    page = Number(query._page);
+  } else if (query._limit && query._offset) {
+    page = Math.floor(Number(query._offset) / Number(query._limit)) + 1;
+  } else if (query._limit && !query._offset) {
+    page = 1;
+  } else {
+    page = null;
+  }
+  const numPages =
+    total === 0 || perPage === null ? 0 : Math.ceil(total / perPage) || 0;
   const isFirst = page === 1;
-  const isLast = page === numPages;
-  const prevPage = page - 1 || null;
-  const nextPage = page + 1 <= numPages ? page + 1 : null;
+  const isLast = numPages > 0 && page === numPages;
+  const prevPage = numPages === 0 ? null : page - 1 || null;
+  const nextPage = numPages > 0 && page + 1 <= numPages ? page + 1 : null;
   return {
     page,
     prevPage,

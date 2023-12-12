@@ -1,12 +1,12 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=0.9.6" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.0" width="250" height="208" />
 
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=0.9.6)](https://npmjs.com/package/sql-love)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=0.9.6)](https://npmjs.com/package/sql-love)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=0.9.6)](https://github.com/kensnyder/sql-love/actions)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=0.9.6)](https://codecov.io/gh/kensnyder/sql-love)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=0.9.6)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.0)](https://npmjs.com/package/sql-love)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.0)](https://npmjs.com/package/sql-love)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.0)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.0)](https://codecov.io/gh/kensnyder/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.0)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node
 
@@ -22,17 +22,18 @@ npm install sql-love
   - [Parsing base SQL](#parsing-base-sql)
   - [SQL injection](#sql-injection)
   - [Building the Query](#building-the-query)
-  - [More examples](#where-examples)
+  - [More examples](#more-examples)
   - [Counting results](#counting-results)
   - [Other methods](#other-methods)
-  - [new SelectBuilder() limitations](#selectparse-limitations)
+  - [Parser limitations](#parser-limitations)
 - [Utility functions](#utility-functions)
   - [getPagination](#getpagination)
-  - [extractGrouped](#extractGrouped)
-  - [extractIndexed](#extractIndexed)
-  - [runMysql and runPrismaWithCount](#runPrisma-and-runPrismaWithCount)
-  - [runMysql and runMysqlWithCount](#runMysql-and-runMysqlWithCount)
-  - [runPg and runPgWithCount](#runPg-and-runPgWithCount)
+  - [extractGrouped](#extractgrouped)
+  - [extractIndexed](#extractindexed)
+  - [extractLookup](#extractlookup)
+  - [runPrisma and runPrismaWithCount](#runprisma-and-runprismawithcount)
+  - [runMysql and runMysqlWithCount](#runmysql-and-runmysqlwithcount)
+  - [toSafeJson functions](#tosafejson)
 - [How to contribute](./CONTRIBUTING.md)
 - [ISC license](./LICENSE.md)
 
@@ -138,9 +139,18 @@ SelectBuilder.setDefaultEngine('pg');
 You should use prepared statements to run the sql and bindings returned by
 `SelectBuilder.compile()`. This will protect you from SQL injection.
 
-Even though `prisma.$queryRawUnsafe()` implies that the query is unsafe,
-execute with the "sql", and "bindings" is actually safe because it uses prepared
+Using `mysqlClient.query(sql, bindings)` and
+`prisma.$queryRawUnsafe(sql, ...bindings)` are examples of using prepared
 statements.
+
+Note that even though the name `prisma.$queryRawUnsafe(sql, ...bindings)`
+implies that the query is unsafe, it is actually safe because
+`prisma.$queryRawUnsafe` uses prepared statements.
+
+SQL Love also includes utility functions for running queries in mysql and
+Prisma so you don't have to remember these functions. See documentation for
+[runPrisma](#runprisma-and-runprismawithcount) and
+[runMysql](#runmysql-and-runmysqlwithcount) below.
 
 ### Building the query
 
@@ -451,12 +461,31 @@ const grouped = extractGrouped('dept', records);
 */
 ```
 
+### extractLookup
+
+You can create a lookup object based on a results set
+
+```js
+const records = [
+  { id: 1, name: 'John', age: 30 },
+  { id: 2, name: 'Jane', age: 35 },
+];
+
+const nameById = extractLookup('id', 'name', records);
+/*
+{ 
+  '1': 'John',
+  '2': 'Jane',
+}
+*/
+```
+
 ### runPrisma and runPrismaWithCount
 
 `runPrisma()` will run a query using Prisma and return the results.
 
 ```js
-import { SelectBuilder, runPrisma, runPrismaWithCount } from 'sql-love';
+import { SelectBuilder, runPrisma } from 'sql-love';
 import { prisma } from '~/db.server';
 
 const query = new SelectBuilder('SELECT * FROM users');
@@ -469,7 +498,7 @@ const rows = runPrisma(prisma, query, { engine: 'pg' });
 found rows and pagination.
 
 ```js
-import { SelectBuilder, runPrisma, runPrismaWithCount } from 'sql-love';
+import { SelectBuilder, runPrismaWithCount } from 'sql-love';
 import { prisma } from '~/db.server';
 
 const query = new SelectBuilder('SELECT * FROM users')
@@ -485,4 +514,73 @@ See [getPagination](#getpagination) for details on the pagination object.
 
 ### runMysql and runMysqlWithCount
 
-### runPg and runPgWithCount
+`runMysql()` will run a query using mysql and return the results.
+
+```js
+import { SelectBuilder, runMysql } from 'sql-love';
+import { mysql } from 'mysql2';
+const client = mysql.createConnection(config);
+
+const query = new SelectBuilder('SELECT * FROM users');
+query.where('dept', 'Marketing');
+
+const rows = await runMysql(client, query);
+```
+
+`runMysqlWithCount()` will run a query using mysql and return the results,
+found rows and pagination.
+
+```js
+import { SelectBuilder, runMysqlWithCount } from 'sql-love';
+import { mysql } from 'mysql2';
+const client = mysql.createConnection(config);
+
+const query = new SelectBuilder('SELECT * FROM users')
+  .where('dept', 'Marketing')
+  .limit(2)
+  .page(5);
+
+const { records, total, pagination } = await runMysqlWithCount(client, query);
+```
+
+You can also use the mysql2 promise api:
+
+```js
+import { SelectBuilder, runMysqlAsync, runMysqlAsyncWithCount } from 'sql-love';
+import { mysql } from 'mysql2/promise';
+const client = await mysql.createConnection(config);
+
+const query = new SelectBuilder('SELECT * FROM users')
+  .where('dept', 'Marketing')
+  .limit(2)
+  .page(5);
+
+const records = await runMysqlAsync(client, query);
+// OR
+const { records, total, pagination } = await runMysqlAsyncWithCount(
+  client,
+  query
+);
+```
+
+### toSafeJson
+
+With some database clients such as Prisma, your recordsets may contain Date
+objects and BigInt objects. These are not safe to pass to JSON.stringify().
+The following are examples of the toSafeJson\* utility functions.
+
+```js
+import { toSafeJsonString, toSafeJsonRecords } from 'sql-love';
+
+const records = [{ id: 1, name: 'John', created_at: new Date(), groups: 12n }];
+
+toSafeJsonRecords(records);
+// [
+//   { id: 1, name: 'John', created_at: '2023-12-12T17:20:09.471Z', groups: 12 },
+// ]
+
+toSafeJsonString(records);
+// '[{"id":1,"name":"John","created_at":"2023-12-12T17:20:09.471Z","groups":12}]'
+
+// Note that BigInt values too big for Number will be converted to strings
+```
