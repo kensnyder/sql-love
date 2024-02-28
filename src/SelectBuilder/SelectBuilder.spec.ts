@@ -246,6 +246,32 @@ describe('where() with arguments', () => {
     expect(trim(sql)).toBe('SELECT * FROM users WHERE abilities IN(?, ?)');
     expect(bindings).toEqual(['view', 'edit']);
   });
+  it('should handle where with one placeholder', () => {
+    const query = new SelectBuilder();
+    query.table('users');
+    query.where(
+      'users.id IN (SELECT user_id FROM roles WHERE customer_id = ?)',
+      [1]
+    );
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM users WHERE users.id IN (SELECT user_id FROM roles WHERE customer_id = ?)'
+    );
+    expect(bindings).toEqual([1]);
+  });
+  it('should handle where with multiple placeholders', () => {
+    const query = new SelectBuilder();
+    query.table('users');
+    query.where(
+      'users.id IN (SELECT user_id FROM roles WHERE customer_id IN (?, ?))',
+      [1, 2]
+    );
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM users WHERE users.id IN (SELECT user_id FROM roles WHERE customer_id IN (?, ?))'
+    );
+    expect(bindings).toEqual([1, 2]);
+  });
 });
 describe('orWhere()', () => {
   it('should handle arrays', () => {
@@ -765,21 +791,5 @@ describe('tables()', () => {
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM users, groups');
     expect(bindings).toEqual([]);
-  });
-});
-describe('setDefaultEngine()', () => {
-  it('should set ok', () => {
-    SelectBuilder.setDefaultEngine('pg');
-    const query = new SelectBuilder('SELECT * FROM users');
-    query.where('id', 123);
-    const { sql, bindings } = query.compile();
-    expect(trim(sql)).toBe('SELECT * FROM users WHERE id = $1');
-    expect(bindings).toEqual([123]);
-
-    // and set engine to something else then compile again
-    SelectBuilder.setDefaultEngine('oracle');
-    const compiled = query.compile();
-    expect(trim(compiled.sql)).toBe('SELECT * FROM users WHERE id = ?');
-    expect(compiled.bindings).toEqual([123]);
   });
 });

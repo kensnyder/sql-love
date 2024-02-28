@@ -1,64 +1,32 @@
-import Parser from '../Parser/Parser';
 import {
   WhereCriteria,
   buildConditions,
 } from '../buildConditions/buildConditions';
-import {
-  EngineStyle,
-  getDefaultEngine,
-  replaceBindings,
-} from '../defaultEngine/defaultEngine';
-
-export type FieldName =
-  | 'option'
-  | 'options'
-  | 'select'
-  | 'column'
-  | 'columns'
-  | 'table'
-  | 'tables'
-  | 'join'
-  | 'joins'
-  | 'where'
-  | 'wheres'
-  | 'having'
-  | 'havings'
-  | 'groupBy'
-  | 'groupBys'
-  | 'orderBy'
-  | 'orderBys'
-  | 'limit'
-  | 'offset'
-  | 'page';
-
-const isNullish = v => v === undefined || v === null || v === false || isNaN(v);
+import { EngineStyle } from '../defaultEngine/defaultEngine';
 
 /**
- * Build a select query
+ * Base class for building SELECT, UPDATE, and DELETE queries
  * Class Select
  */
-export default class SelectBuilder {
+export default class BaseQueryBuilder {
+  _arrayFields: string[];
+  _scalarFields: string[];
   /**
    * The list of values to bind to the query
    * @private
    */
   _bindings: any[] = [];
   /**
-   * The list of strings to come immediately after "SELECT"
-   * and before column names
+   * The list of strings to come immediately after "UPDATE"
+   * and before the table name. (e.g. "LOW_PRIORITY" or "IGNORE")
    * @private
    */
   _options: string[] = [];
   /**
-   * The list of column names to select
-   * @private
-   */
-  _tables: string[] = [];
-  /**
    * The list of tables in the FROM clause
    * @private
    */
-  _columns: string[] = [];
+  _tables: string[] = [];
   /**
    * The list of JOIN strings to add
    * @private
@@ -69,16 +37,6 @@ export default class SelectBuilder {
    * @private
    */
   _wheres: string[] = [];
-  /**
-   * The list of GROUP BY clauses to join with commas
-   * @private
-   */
-  _groupBys: string[] = [];
-  /**
-   * The list of HAVING clauses to join with AND
-   * @private
-   */
-  _havings: string[] = [];
   /**
    * The list of ORDER BY clauses to join with commas
    * @private
@@ -100,49 +58,7 @@ export default class SelectBuilder {
    */
   _page: number;
 
-  /**
-   * Select constructor
-   * @param [sql]  A base SQL query to parse
-   * @param [bindings]  Placeholders to bind to the query
-   */
-  constructor(sql: string = null, bindings: Record<string, any> = null) {
-    if (sql) {
-      if (bindings) {
-        const keys = Object.keys(bindings);
-        const regexp = new RegExp(`:(${keys.join('|')})`, 'g');
-        sql = sql.replace(regexp, ($0, $1) => {
-          this._bindings.push(bindings[$1]);
-          return `__BOUND_${this._bindings.length - 1}__`;
-        });
-      }
-      new Parser(this).parse(sql);
-    }
-  }
-
-  /**
-   * Get the SQL as a pretty-printed string alongside an array of bindings
-   * @param engine  The database engine style (mssql, mysql, oracle, pg)
-   * @return The SQL query as a string
-   */
-  compile({
-    engine = getDefaultEngine(),
-    bindingIndex = 1,
-  }: {
-    engine?: EngineStyle;
-    bindingIndex?: number;
-  } = {}) {
-    // build all the lines
-    const lines = [
-      'SELECT',
-      this._options.length ? `  ${this._options.join('\n  ')}` : null,
-      this._columns.length ? `  ${this._columns.join(',\n  ')}` : '  *\n',
-      `FROM ${this._tables.join(', ')}`,
-      this._joins.length ? this._joins.join('\n') : null,
-      this._wheres.length ? `WHERE ${this._wheres.join('\n  AND ')}` : null,
-      this._groupBys.length ? `GROUP BY ${this._groupBys.join(',\n  ')}` : null,
-      this._havings.length ? `HAVING ${this._havings.join('\n  AND ')}` : null,
-      this._orderBys.length ? `ORDER BY ${this._orderBys.join(',\n  ')}` : null,
-    ];
+  _compilePaginationToLines(lines: string[], engine: EngineStyle) {
     if (this._page > 0) {
       const offset = (this._page - 1) * this._limit;
       lines.push(this._compileOFFSET(engine, offset));
@@ -155,9 +71,6 @@ export default class SelectBuilder {
         lines.push(this._compileLIMIT(engine, this._limit));
       }
     }
-
-    const pretty = lines.filter(Boolean).join('\n').trim();
-    return replaceBindings(pretty, this._bindings, { engine, bindingIndex });
   }
 
   _compileLIMIT(engineStyle: EngineStyle, limit: number) {
@@ -181,118 +94,22 @@ export default class SelectBuilder {
   }
 
   /**
-   * Get SQL needed to return the found rows of this query
-   * @param engineStyle  The database engine style (mssql, mysql, oracle, pg)
-   * @param countExpr  The expression to use inside the COUNT()
-   */
-  compileCount({
-    countExpr = '*',
-    engine = getDefaultEngine(),
-    bindingIndex = 1,
-  }: {
-    countExpr?: string;
-    engine?: EngineStyle;
-    bindingIndex?: number;
-  } = {}) {
-    const query = this.getFoundRowsQuery(countExpr);
-    const { sql, bindings } = query.compile({ engine, bindingIndex });
-    if (this._havings.length === 0) {
-      return { sql, bindings };
-    } else {
-      const subquerySql = sql.replace(/\n/g, '\n\t');
-      return {
-        sql: `SELECT COUNT(*) AS found_rows\nFROM (\n${subquerySql}\n) AS subquery_results`,
-        bindings,
-      };
-    }
-  }
-
-  /**
-   * Get SQL needed to union this query with another
-   * @param query  The query to union
-   * @param engine  The database engine style (mssql, mysql, oracle, pg)
-   */
-  compileUnion(
-    query: SelectBuilder,
-    {
-      engine = getDefaultEngine(),
-      bindingIndex = 1,
-    }: {
-      engine?: EngineStyle;
-      bindingIndex?: number;
-    } = {}
-  ) {
-    const first = this.compile({ engine, bindingIndex });
-    const second = query.compile({
-      engine,
-      bindingIndex: first.bindings.length + bindingIndex,
-    });
-    return {
-      sql: `(${first.sql})\nUNION\n(${second.sql})`,
-      bindings: [...first.bindings, ...second.bindings],
-    };
-  }
-
-  compileWithRecursive({
-    ancestors = true,
-    self = true,
-    descendants = false,
-    engine = getDefaultEngine(),
-    bindingIndex = 1,
-    parentIdName = 'parentId',
-  }: {
-    ancestors?: boolean;
-    self?: boolean;
-    descendants?: boolean;
-    engine: EngineStyle;
-    bindingIndex?: number;
-    parentIdName?: string;
-  }) {
-    // if (ancestors && descendants) {
-    //   sql = `WITH RECURSIVE descendants AS (%s), ancestors AS (%s) SELECT * FROM descendants UNION SELECT * FROM ancestors`;
-    // } else if (ancestors) {
-    //   sql = `WITH RECURSIVE ancestors AS (%s) SELECT * FROM ancestors`;
-    // } else if (descendants) {
-    //   sql = `WITH RECURSIVE descendants AS (%s) SELECT * FROM descendants`;
-    // }
-    /*
-      const leaves: RelativeRecord[] = await prisma.$queryRaw`
-    WITH RECURSIVE
-      descendants AS (
-        SELECT wc.id, wc.uuid, wc.title, wc."parentWebContentId" as "parentId"
-        FROM "WebContent" wc
-        WHERE wc."parentWebContentId" = ${item.id}
-        UNION ALL
-        SELECT wc.id, wc.uuid, wc.title, wc."parentWebContentId" as "parentId"
-        FROM descendants, "WebContent" wc
-        WHERE wc."parentWebContentId" = descendants.id
-      ),
-      ancestors AS (
-        SELECT wc.id, wc.uuid, wc.title, wc."parentWebContentId" as "parentId"
-        FROM "WebContent" wc
-        WHERE wc.id = ${item.id}
-        UNION ALL
-        SELECT wc.id, wc.uuid, wc.title, wc."parentWebContentId" as "parentId"
-        FROM ancestors, "WebContent" wc
-        WHERE wc.id = ancestors."parentId"
-      )
-    SELECT * FROM descendants
-    UNION
-    SELECT * FROM ancestors`;
-     */
-  }
-
-  /**
    * @param  [fieldOrFields]  If given, reset the given component(s), otherwise reset all query components
    *   Valid components: option, column, table, where, orWhere, having, groupBy, orderBy, limit, offset, page
    * @return This object
    */
-  reset(fieldOrFields: FieldName | FieldName[] = null) {
+  reset(fieldOrFields: string | string[] = null) {
     if (Array.isArray(fieldOrFields)) {
       fieldOrFields.forEach(name => this.reset(name));
       return this;
     }
     if (fieldOrFields) {
+      const isArray = this._arrayFields.includes(fieldOrFields);
+      const isScalar = this._scalarFields.includes(fieldOrFields);
+      const isKnown = isArray || isScalar;
+      if (!isKnown) {
+        throw new Error('Cannot reset unknown field name: ' + fieldOrFields);
+      }
       const pluralizable = [
         'option',
         'column',
@@ -306,93 +123,11 @@ export default class SelectBuilder {
       if (pluralizable.indexOf(fieldOrFields) > -1) {
         prop += 's';
       }
-      const isScalar = ['limit', 'offset', 'page'].indexOf(fieldOrFields) > -1;
       this[prop] = isScalar ? null : [];
     } else {
-      this._options = [];
-      this._columns = [];
-      this._tables = [];
-      this._joins = [];
-      this._wheres = [];
-      this._groupBys = [];
-      this._havings = [];
-      this._orderBys = [];
-      this._limit = null;
-      this._offset = null;
-      this._page = null;
-      this._bindings = [];
+      this.reset(this._arrayFields);
+      this.reset(this._scalarFields);
     }
-    return this;
-  }
-
-  /**
-   * Clone this builder object
-   */
-  getClone() {
-    const copy = new SelectBuilder();
-    copy._options = [...this._options];
-    copy._columns = [...this._columns];
-    copy._tables = [...this._tables];
-    copy._joins = [...this._joins];
-    copy._wheres = [...this._wheres];
-    copy._havings = [...this._havings];
-    copy._groupBys = [...this._groupBys];
-    copy._orderBys = [...this._orderBys];
-    copy._limit = this._limit;
-    copy._offset = this._offset;
-    copy._page = this._page;
-    copy._bindings = [...this._bindings];
-    return copy;
-  }
-
-  /**
-   * Build a version of this query that simply returns COUNT(*)
-   * @param [countExpr="*"]  Use to specify `DISTINCT colname` if needed
-   */
-  getFoundRowsQuery(countExpr: string = '*') {
-    if (this._havings.length === 0) {
-      const clone = this.getClone();
-      clone._columns = [`COUNT(${countExpr}) AS found_rows`];
-      clone._options = [];
-      clone._groupBys = [];
-      clone._orderBys = [];
-      clone._limit = null;
-      clone._offset = null;
-      clone._page = null;
-      return clone;
-    } else {
-      const subquery = this.getClone();
-      subquery._limit = null;
-      subquery._offset = null;
-      subquery._page = null;
-      return subquery;
-    }
-  }
-
-  /**
-   * Add an array of column names to fetch
-   * @param columnNames  The names of columns
-   */
-  select(columnNames: string[]) {
-    this._columns = this._columns.concat(columnNames);
-    return this;
-  }
-
-  /**
-   * Add an array of column names to fetch
-   * @param columnNames  The names of columns
-   */
-  columns(columnNames: string[]) {
-    this._columns = this._columns.concat(columnNames);
-    return this;
-  }
-
-  /**
-   * Add a column name to fetch
-   * @param columnName  The name of the column
-   */
-  column(columnName: string) {
-    this._columns.push(columnName);
     return this;
   }
 
@@ -408,7 +143,6 @@ export default class SelectBuilder {
   /**
    * Add a table to the "FROM" clause (same as .from())
    * @param {String} tableName  The name of the table to query
-   * @return {Select}
    */
   table(tableName: string) {
     this._tables.push(tableName);
@@ -418,20 +152,9 @@ export default class SelectBuilder {
   /**
    * Add multiple table to the "FROM" clause
    * @param {Array} tableNames  The names of the tables to query
-   * @return {Select}
    */
   tables(tableNames: string[]) {
     this._tables.push(...tableNames);
-    return this;
-  }
-
-  /**
-   * Add a table to the "FROM" clause (same as .table())
-   * @param {String} tableName  The name of the table to query
-   * @return {Select}
-   */
-  from(tableName: string) {
-    this._tables.push(tableName);
     return this;
   }
 
@@ -588,15 +311,6 @@ export default class SelectBuilder {
   }
 
   /**
-   * Add a group by column or expression
-   * @param column  The name of a column (or expression) to group by
-   */
-  groupBy(column: string) {
-    this._groupBys.push(column);
-    return this;
-  }
-
-  /**
    * Add WHERE clauses to conditions (See _conditions for usage)
    */
   where(...args: WhereCriteria) {
@@ -610,6 +324,8 @@ export default class SelectBuilder {
    * @param twoValueArray  The two values to be between
    */
   whereBetween(column: string, twoValueArray: [any, any]) {
+    const isNullish = v =>
+      v === undefined || v === null || v === false || isNaN(v);
     if (!isNullish(twoValueArray[0]) && !isNullish(twoValueArray[1])) {
       this.where(column, 'BETWEEN', twoValueArray);
     } else if (!isNullish(twoValueArray[0]) && isNullish(twoValueArray[1])) {
@@ -623,7 +339,7 @@ export default class SelectBuilder {
   }
 
   /**
-   * Add a series of WHERE clauses joined by OR (See _conditions for usage)
+   * Add a series of WHERE clauses joined by OR (See buildConditions for usage)
    * @param conditions
    */
   _orConditions(
@@ -663,26 +379,6 @@ export default class SelectBuilder {
   ) {
     const joined = this._orConditions(conditions);
     this.where(`(${joined})`);
-    return this;
-  }
-
-  /**
-   * Add an OR with conditions under the HAVING clause
-   * @param conditions  A list or object where each item is an array with parameters that would be taken by having()
-   */
-  orHaving(
-    conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
-  ) {
-    const joined = this._orConditions(conditions);
-    this.having(`(${joined})`);
-    return this;
-  }
-
-  /**
-   * Add a HAVING condition (See _conditions for usage)
-   */
-  having(...args: WhereCriteria) {
-    buildConditions(this._havings, this._bindings, args);
     return this;
   }
 
