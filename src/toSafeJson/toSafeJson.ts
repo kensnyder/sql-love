@@ -1,8 +1,4 @@
-type SafeValue<T> = T extends BigInt
-  ? number | string
-  : T extends Date
-    ? string
-    : T;
+type SafeValue<T> = T extends BigInt ? number | string : T;
 type SafeRecord<T> = Record<string, SafeValue<T>>;
 type SafeRecords<T> = Array<SafeRecord<T>>;
 
@@ -18,9 +14,6 @@ export function toSafeJsonValue<T>(value: T): SafeValue<T> {
     //   If so, then return it as a string, otherwise return it as a Number
     // @ts-expect-error
     return value == asNumber ? asNumber : value.toString();
-  }
-  if (value instanceof Date) {
-    return value.toISOString() as SafeValue<T>;
   }
   return value as SafeValue<T>;
 }

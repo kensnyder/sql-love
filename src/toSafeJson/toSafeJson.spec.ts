@@ -12,12 +12,6 @@ describe('toSafeJsonString()', () => {
     const json = toSafeJsonString(records);
     expect(json).toBe(`[{"found_rows":"${myBigInt.toString()}"}]`);
   });
-  it('should convert Date to ISO String', () => {
-    const date = new Date('2023-12-06');
-    const records = [{ date }];
-    const json = toSafeJsonString(records);
-    expect(json).toBe(`[{"date":"${date.toISOString()}"}]`);
-  });
 });
 describe('jsonSafePrisma()', () => {
   it('should convert small BigInt to Number', () => {
@@ -30,11 +24,5 @@ describe('jsonSafePrisma()', () => {
     const records = [{ found_rows: myBigInt }];
     const json = toSafeJsonRecords(records);
     expect(json).toStrictEqual([{ found_rows: myBigInt.toString() }]);
-  });
-  it('should convert Date to ISO String', () => {
-    const date = new Date('2023-12-06');
-    const records = [{ date }];
-    const json = toSafeJsonRecords(records);
-    expect(json).toStrictEqual([{ date: date.toISOString() }]);
   });
 });
