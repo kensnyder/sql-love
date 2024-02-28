@@ -17,13 +17,15 @@ interface PrismaClient {
  * @param options
  * @param options.engine  The engine style to use ("mssql" | "mysql" | "oracle" | "pg")
  */
-export async function runPrisma(
+export async function runPrisma<
+  T extends Array<Record<string, any>> = Array<Record<string, any>>,
+>(
   prisma: PrismaClient,
   query: SelectBuilder,
   { engine = undefined }: { engine?: EngineStyle } = {}
-): Promise<Array<Record<string, any>>> {
+): Promise<T> {
   const { sql, bindings } = query.compile({ engine });
-  return prisma.$queryRawUnsafe(sql, ...bindings);
+  return prisma.$queryRawUnsafe(sql, ...bindings) as unknown as Promise<T>;
 }
 
 /**
@@ -34,16 +36,34 @@ export async function runPrisma(
  * @param options.engine  The engine style to use ("mssql" | "mysql" | "oracle" | "pg")
  * @param options.countExpr  The SQL expression to use for the count (default "*")
  */
-export async function runPrismaWithCount(
+export async function runPrismaWithCount<
+  T extends Array<Record<string, any>> = Array<Record<string, any>>,
+>(
   prisma: PrismaClient,
   query: SelectBuilder,
   {
     engine = undefined,
     countExpr = '*',
   }: { engine?: EngineStyle; countExpr?: string } = {}
-) {
+): Promise<{
+  records: T;
+  total: number;
+  pagination: {
+    page: number;
+    prevPage: number;
+    nextPage: number;
+    perPage: number;
+    numPages: number;
+    total: number;
+    isFirst: boolean;
+    isLast: boolean;
+  };
+}> {
   const { sql, bindings } = query.compile({ engine });
-  const records = await prisma.$queryRawUnsafe(sql, ...bindings);
+  const records = (await prisma.$queryRawUnsafe(
+    sql,
+    ...bindings
+  )) as unknown as T;
   if (records.length > 0) {
     const { sql, bindings } = query.compileCount({ engine, countExpr });
     const result = await prisma.$queryRawUnsafe(sql, ...bindings);
