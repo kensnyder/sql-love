@@ -3,7 +3,7 @@
 # sql-love
 
 [![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.0)](https://npmjs.com/package/sql-love)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.0)](https://npmjs.com/package/sql-love)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.0)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
 [![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.0)](https://github.com/kensnyder/sql-love/actions)
 [![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.0)](https://codecov.io/gh/kensnyder/sql-love)
 [![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.0)](https://opensource.org/licenses/ISC)
@@ -65,16 +65,28 @@ if (areaCode) {
 query.sort(sortField);
 query.limit(limitTo);
 const { sql, bindings } = query.compile();
+```
 
-// then execute the SQL in your preferred client:
-// like mysql2
+Then execute the SQL in your preferred client:
+
+```js
+// mysql2:
 connection.query(sql, bindings, (err, results, fields) => {});
-// or Prisma
+
+// Prisma:
 const result = await prisma.$queryRawUnsafe(sql, ...bindings);
 
-// Note that these are prepared statements so the values in the "bindings"
-//   array are safe from SQL injection.
+// Cloudflare d1
+const { results } = await env.DB.prepare(sql)
+  .bind(...bindings)
+  .all();
 ```
+
+_Note that these are prepared statements so the values in the "bindings"_
+_array are safe from SQL injection, with the caveat that you are in charge of_
+_quoting any identifiers. For instance, we don't recommend populating `u.email`_
+_from user input in the example above. But if you do, be sure to use your_
+_client's `quoteIdentifier()` function._
 
 It is possible to add placeholders to the base query.
 
@@ -111,7 +123,7 @@ And "bindings" equals:
 You may specify a compiler engine to use. The default is `"mysql"`.
 
 ```js
-import { SelectBuilder } from 'sql-love';
+import { SelectBuilder, setDefaultEngine } from 'sql-love';
 
 const query = new SelectBuilder('SELECT * FROM users')
   .limit(10)
@@ -119,19 +131,18 @@ const query = new SelectBuilder('SELECT * FROM users')
   .where('id', 1);
 
 query.compile({ engine: 'mysql' }).sql;
+query.compile({ engine: 'sqlite' }).sql;
 // SELECT * FROM users WHERE id = ? OFFSET 20 LIMIT 10
 
 query.compile({ engine: 'pg' }).sql;
 // SELECT * FROM users WHERE id = $1 OFFSET 20 LIMIT 10
 
 query.compile({ engine: 'mssql' }).sql;
-// SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
-
 query.compile({ engine: 'oracle' }).sql;
 // SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 
 // Or you can specify the default engine to use in the compile function
-SelectBuilder.setDefaultEngine('pg');
+setDefaultEngine('pg');
 ```
 
 ### SQL injection
@@ -231,7 +242,17 @@ query.where({ status: ['pending', 'approved'] });
 query.where({ 'status NOT IN': ['pending', 'approved'] });
 query.where({ 'status !=': ['pending', 'approved'] });
 query.where({ 'status <>': ['pending', 'approved'] });
-// Note: .having() supports the same signatures as .where()
+
+// the following demonstrates how to use question marks for binding
+query.where(
+  'users.id IN (SELECT user_id FROM roles WHERE customer_id IN (?, ?))',
+  [1, 2]
+);
+query.where(
+  'users.id IN (SELECT user_id FROM roles WHERE customer_id = ?)',
+  // even if there is only one placeholder, you must use an array
+  [1]
+);
 
 // The following demonstrates using objects to specify multiple conditions
 query.where({
@@ -243,6 +264,8 @@ query.where({
   conditions: ['new', 'used'],
 });
 
+// Note: .having() supports the same signatures as .where()
+
 // The following demonstrate equivalent ways to use OR
 query.orWhere([{ approved_at: null }, { denied_at: null }]);
 query.orWhere({ approved_at: null, denied_at: null });
@@ -252,6 +275,7 @@ query.orWhere([
   ['denied_at =', null],
 ]);
 query.where('(approved_at IS NULL OR denied_at IS NULL)');
+
 // Note: .orHaving() supports the same signatures as .orWhere()
 
 // The following demonstrate joins
@@ -565,22 +589,23 @@ const { records, total, pagination } = await runMysqlAsyncWithCount(
 
 ### toSafeJson
 
-With some database clients such as Prisma, your recordsets may contain Date
-objects and BigInt objects. These are not safe to pass to JSON.stringify().
-The following are examples of the toSafeJson\* utility functions.
+With some database clients such as Prisma, your recordsets may contain BigInt
+objects. These are not safe to pass to JSON.stringify(). The following are
+examples of the toSafeJson\* utility functions.
 
 ```js
 import { toSafeJsonString, toSafeJsonRecords } from 'sql-love';
 
-const records = [{ id: 1, name: 'John', created_at: new Date(), groups: 12n }];
+const records = [{ count: 12n }, { count: 9007199254740993n }];
 
 toSafeJsonRecords(records);
 // [
-//   { id: 1, name: 'John', created_at: '2023-12-12T17:20:09.471Z', groups: 12 },
+//   { count: 12 },
+//   { count: "9007199254740993" },
 // ]
 
 toSafeJsonString(records);
-// '[{"id":1,"name":"John","created_at":"2023-12-12T17:20:09.471Z","groups":12}]'
+// '[{"count":12},{"count":"9007199254740993"}]'
 
-// Note that BigInt values too big for Number will be converted to strings
+// Note that BigInt values too big for Number are converted to strings
 ```
