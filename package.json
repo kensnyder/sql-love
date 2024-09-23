@@ -1,6 +1,6 @@
 {
   "name": "sql-love",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Build SQL queries with JavaScript",
   "main": "dist/index.js",
   "type": "module",
@@ -32,11 +32,11 @@
   },
   "homepage": "https://github.com/kensnyder/sql-love#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "2.0.2",
+    "@vitest/coverage-v8": "2.1.1",
     "prettier": "3.3.3",
-    "prettier-plugin-organize-imports": "4.0.0",
+    "prettier-plugin-organize-imports": "4.1.0",
     "rimraf": "6.0.1",
-    "typescript": "5.5.3",
-    "vitest": "2.0.2"
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
   }
 }

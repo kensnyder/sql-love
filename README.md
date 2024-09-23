@@ -1,12 +1,12 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.3" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.4" width="250" height="208" />
 
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.3)](https://npmjs.com/package/sql-love)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.3)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.3)](https://github.com/kensnyder/sql-love/actions)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.3)](https://codecov.io/gh/kensnyder/sql-love)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.3)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=1)](https://npmjs.com/package/sql-love)
+[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.4)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.4)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.4)](https://codecov.io/gh/kensnyder/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.4)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node
 
@@ -120,7 +120,10 @@ And "bindings" equals:
 */
 ```
 
-You may specify a compiler engine to use. The default is `"mysql"`.
+You may specify a compiler engine to use. The default is `"mysql"`. Supported
+values are `"mysql" | "sqlite" | "pg" | "mssql" | "oracle"`. Each compiler
+returns slightly different SQL depending on the syntax for binding
+placeholders and for limit/offset.
 
 ```js
 import { SelectBuilder, setDefaultEngine } from 'sql-love';
@@ -155,8 +158,9 @@ Using `mysqlClient.query(sql, bindings)` and
 statements.
 
 Note that even though the name `prisma.$queryRawUnsafe(sql, ...bindings)`
-implies that the query is unsafe, it is actually safe because
-`prisma.$queryRawUnsafe` uses prepared statements.
+implies that the query is unsafe, it is actually safe because passing bindings
+to `prisma.$queryRawUnsafe` ensures those values are bound to a prepared
+statement.
 
 SQL Love also includes utility functions for running queries in mysql and
 Prisma so you don't have to remember these functions. See documentation for
@@ -166,7 +170,7 @@ Prisma so you don't have to remember these functions. See documentation for
 ### Building the query
 
 Use the following methods to build queries. And see
-[more examples below](#where-examples).
+[more examples below](#more-examples).
 
 - `query.where(column, operator, value)` - Require column satisfy operator
 - `query.where(column, value)` - Require column equal a value
