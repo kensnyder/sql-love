@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import substrCount from './substrCount';
 
 describe('substrCount', function () {

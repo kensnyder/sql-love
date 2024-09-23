@@ -2,17 +2,33 @@
   "name": "sql-love",
   "version": "1.0.4",
   "description": "Build SQL queries with JavaScript",
-  "main": "dist/index.js",
   "type": "module",
-  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "test": "vitest run",
     "test-watch": "vitest",
     "coverage": "vitest run --coverage",
-    "clean": "rimraf dist/ && mkdir dist && touch dist/.gitkeep",
-    "build": "npm run clean && npx -p typescript tsc --project tsconfig.build.json",
-    "release": "npm i && npm run build && npm publish"
+    "view-coverage": "open ./coverage/lcov-report/index.html",
+    "build": "npm run build:clean && npm run build:dts && npm run build:esm && npm run build:cjs",
+    "build:clean": "rimraf dist/ && mkdir dist && touch dist/.gitkeep",
+    "build:dts": "yes | npx dts-bundle-generator -o dist/index.d.ts index.ts",
+    "build:esm": "yes | npx esbuild index.ts --minify --bundle --platform=node --format=esm --outfile=dist/index.mjs",
+    "build:cjs": "yes | npx esbuild index.ts --minify --bundle --platform=node --format=cjs --outfile=dist/index.cjs"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kensnyder/sql-love.git"
@@ -32,6 +48,7 @@
   },
   "homepage": "https://github.com/kensnyder/sql-love#readme",
   "devDependencies": {
+    "@types/node": "22.6.1",
     "@vitest/coverage-v8": "2.1.1",
     "prettier": "3.3.3",
     "prettier-plugin-organize-imports": "4.1.0",

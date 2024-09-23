@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { toSafeJsonRecords, toSafeJsonString } from './toSafeJson';
 
 describe('toSafeJsonString()', () => {

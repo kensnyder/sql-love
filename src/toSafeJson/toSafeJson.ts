@@ -25,7 +25,7 @@ export function toSafeJsonValue<T>(value: T): SafeValue<T> {
 export function toSafeJsonRecord<T extends Record<string, any>>(
   record: T
 ): SafeRecord<T> {
-  const newRecord: SafeValue<T> = {} as any;
+  const newRecord = {} as SafeRecord<T>;
   for (const key in record) {
     /* v8 ignore next 3 */
     if (!Object.prototype.hasOwnProperty.call(record, key)) {

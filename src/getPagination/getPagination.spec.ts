@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import SelectBuilder from '../SelectBuilder/SelectBuilder';
 import getPagination from './getPagination';
 

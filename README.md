@@ -2,10 +2,13 @@
 
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=1)](https://npmjs.com/package/sql-love)
-[![Dependencies](https://badgen.net/static/dependencies/0/green?v=1.0.4)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.4)](https://npmjs.com/package/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.0.4)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
 [![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.4)](https://github.com/kensnyder/sql-love/actions)
 [![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.4)](https://codecov.io/gh/kensnyder/sql-love)
+[![Gzipped Size](https://badgen.net/bundlephobia/minzip/sql-love?label=minzipped&v=1.0.4)](https://bundlephobia.com/package/sql-love@1.0.4)
+[![Dependency details](https://badgen.net/bundlephobia/dependency-count/sql-love?v=1.0.4)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
+[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.0.4)](https://www.npmjs.com/package/sql-love)
 [![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.4)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node
@@ -65,11 +68,11 @@ if (areaCode) {
 query.sort(sortField);
 query.limit(limitTo);
 const { sql, bindings } = query.compile();
-```
 
-Then execute the SQL in your preferred client:
+//
+// Then execute the SQL in your preferred client:
+//
 
-```js
 // mysql2:
 connection.query(sql, bindings, (err, results, fields) => {});
 
@@ -82,11 +85,13 @@ const { results } = await env.DB.prepare(sql)
   .all();
 ```
 
-_Note that these are prepared statements so the values in the "bindings"_
-_array are safe from SQL injection, with the caveat that you are in charge of_
-_quoting any identifiers. For instance, we don't recommend populating `u.email`_
-_from user input in the example above. But if you do, be sure to use your_
-_client's `quoteIdentifier()` function._
+_Note:_ These are prepared statements so the values in the `bindings` array are
+safe from SQL injection, with the caveat that you are in charge of quoting any
+identifiers. For instance, don't populate `u.email` from user input in the
+example above. But if you need dynamic identifiers for some reason, be sure to
+use your SQL client's `quoteIdentifier()` function.
+
+### Parsing with placeholders
 
 It is possible to add placeholders to the base query.
 
@@ -120,9 +125,11 @@ And "bindings" equals:
 */
 ```
 
-You may specify a compiler engine to use. The default is `"mysql"`. Supported
-values are `"mysql" | "sqlite" | "pg" | "mssql" | "oracle"`. Each compiler
-returns slightly different SQL depending on the syntax for binding
+### RDBMS engine
+
+You may specify a RMDBS engine to compile for. The default is `"mysql"`.
+Supported values are `"mysql" | "sqlite" | "pg" | "mssql" | "oracle"`. Each
+RMDBS engine needs slightly different SQL depending on the syntax for binding
 placeholders and for limit/offset.
 
 ```js
@@ -153,14 +160,13 @@ setDefaultEngine('pg');
 You should use prepared statements to run the sql and bindings returned by
 `SelectBuilder.compile()`. This will protect you from SQL injection.
 
-Using `mysqlClient.query(sql, bindings)` and
+Using mysql2's `client.query(sql, bindings)` or Prisma's
 `prisma.$queryRawUnsafe(sql, ...bindings)` are examples of using prepared
 statements.
 
-Note that even though the name `prisma.$queryRawUnsafe(sql, ...bindings)`
-implies that the query is unsafe, it is actually safe because passing bindings
-to `prisma.$queryRawUnsafe` ensures those values are bound to a prepared
-statement.
+Note that even though the name `prisma.$queryRawUnsafe` implies that the
+operation is unsafe, values are bound to a prepared statement and you would be
+using `prisma.$queryRawUnsafe` as intended.
 
 SQL Love also includes utility functions for running queries in mysql and
 Prisma so you don't have to remember these functions. See documentation for
@@ -319,7 +325,7 @@ const { sql } = query.compileCount({ countExpr: 'DISTINCT externalId' });
 // SELECT COUNT(DISTINCT externalId) AS found_rows FROM users
 ```
 
-With queries that have a "HAVING" clause, the main query will be wrapped in a
+With queries that have a `HAVING` clause, the main query will be wrapped in a
 count query.
 
 ```js
@@ -330,6 +336,10 @@ const query = new SelectBuilder(`
   HAVING COUNT(*) > 1
 `);
 
+// Regular query
+const { sql } = query.compile();
+
+// Count query
 const { sql } = query.compileCount();
 /*
 SELECT COUNT(*) AS found_rows FROM (
@@ -347,8 +357,10 @@ SelectBuilder has a few other useful methods.
 
 - `query.getClone()` - Get an exact copy of this query object
 - `query.unjoin(tableName)` - Remove a join expression
-- `query.reset(field)` - Reset a single aspect of the query (e.g. 'where' or 'having')
-- `query.reset(fields)` - Reset a few particular aspects of the query (e.g. \['where', 'having'\])
+- `query.reset(field)` - Reset a single aspect of the query (e.g. 'where' or '
+  having')
+- `query.reset(fields)` - Reset a few particular aspects of the query (e.g.
+  `['where', 'having']`)
 - `query.reset()` - Reset query to an empty state
 
 ### Parser limitations
@@ -432,7 +444,8 @@ import { SelectBuilder, getPagination } from 'sql-love';
 const query = new SelectBuilder('SELECT * FROM users').limit(10).page(1);
 // ...
 // run a count query to determine that there are 42 results
-const pagination = getPagination(query, 42);
+const count = 42;
+const pagination = getPagination(query, count);
 expect(pagination).toEqual({
   page: 1,
   prevPage: null,
@@ -547,6 +560,7 @@ See [getPagination](#getpagination) for details on the pagination object.
 ```js
 import { SelectBuilder, runMysql } from 'sql-love';
 import { mysql } from 'mysql2';
+
 const client = mysql.createConnection(config);
 
 const query = new SelectBuilder('SELECT * FROM users');
@@ -561,6 +575,7 @@ found rows and pagination.
 ```js
 import { SelectBuilder, runMysqlWithCount } from 'sql-love';
 import { mysql } from 'mysql2';
+
 const client = mysql.createConnection(config);
 
 const query = new SelectBuilder('SELECT * FROM users')
@@ -576,6 +591,7 @@ You can also use the mysql2 promise api:
 ```js
 import { SelectBuilder, runMysqlAsync, runMysqlAsyncWithCount } from 'sql-love';
 import { mysql } from 'mysql2/promise';
+
 const client = await mysql.createConnection(config);
 
 const query = new SelectBuilder('SELECT * FROM users')
@@ -593,23 +609,23 @@ const { records, total, pagination } = await runMysqlAsyncWithCount(
 
 ### toSafeJson
 
-With some database clients such as Prisma, your recordsets may contain BigInt
-objects. These are not safe to pass to JSON.stringify(). The following are
-examples of the toSafeJson\* utility functions.
+With some database clients such as Prisma, your recordsets may contain `BigInt`
+objects. These are not safe to pass to `JSON.stringify()`. The following are
+examples of the `toSafeJson*` utility functions.
 
 ```js
 import { toSafeJsonString, toSafeJsonRecords } from 'sql-love';
 
-const records = [{ count: 12n }, { count: 9007199254740993n }];
+const records = [{ postCount: 12n }, { postCount: 9007199254740993n }];
 
 toSafeJsonRecords(records);
 // [
-//   { count: 12 },
-//   { count: "9007199254740993" },
+//   { postCount: 12 },
+//   { postCount: "9007199254740993" },
 // ]
 
 toSafeJsonString(records);
-// '[{"count":12},{"count":"9007199254740993"}]'
+// '[{"postCount":12},{"postCount":"9007199254740993"}]'
 
-// Note that BigInt values too big for Number are converted to strings
+// As you can see, BigInt values too big for Number are converted to strings
 ```

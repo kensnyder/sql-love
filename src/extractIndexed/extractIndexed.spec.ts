@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import extractIndexed from './extractIndexed';
 
 describe('extractIndexed()', () => {
