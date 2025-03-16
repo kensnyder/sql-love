@@ -1,5 +1,9 @@
 ## Change Log
 
+### v1.0.5 - 16 Mar 2025
+
+- Upgrade deps
+
 ### v1.0.0 - 12 Dec 2023
 
 - Upgrade to vitest v1
