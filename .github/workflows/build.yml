@@ -6,7 +6,7 @@ jobs:
 
     strategy:
       matrix:
-        bun-version: [1.1.x, 1.2.x, latest]
+        bun-version: [1.1, 1.2, latest]
 
     steps:
       - name: ➡️ Checkout repository
