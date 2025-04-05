@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { toSafeJsonRecords, toSafeJsonString } from './toSafeJson';
 
 describe('toSafeJsonString()', () => {
@@ -18,12 +18,14 @@ describe('jsonSafePrisma()', () => {
   it('should convert small BigInt to Number', () => {
     const records = [{ found_rows: 30n }];
     const json = toSafeJsonRecords(records);
+    // @ts-expect-error
     expect(json).toStrictEqual([{ found_rows: 30 }]);
   });
   it('should convert large BigInt to String', () => {
     const myBigInt = BigInt(String(Number.MAX_SAFE_INTEGER) + '0');
     const records = [{ found_rows: myBigInt }];
     const json = toSafeJsonRecords(records);
+    // @ts-expect-error
     expect(json).toStrictEqual([{ found_rows: myBigInt.toString() }]);
   });
 });

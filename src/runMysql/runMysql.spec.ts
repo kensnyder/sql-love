@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, jest } from 'bun:test';
 import SelectBuilder from '../SelectBuilder/SelectBuilder';
 import {
   runMysql,
@@ -15,7 +15,7 @@ describe('runMysql', () => {
     ];
     const mockFields = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
     const client = {
-      query: vi.fn(
+      query: jest.fn(
         (
           sql: string,
           bindings: any[],
@@ -43,7 +43,7 @@ describe('runMysql', () => {
   });
   it('should handle errors', async () => {
     const client = {
-      query: vi.fn(
+      query: jest.fn(
         (
           sql: string,
           bindings: any[],
@@ -77,7 +77,7 @@ describe('runMysql', () => {
     const mockFields2 = [{ name: 'found_rows' }];
     let callCount = 0;
     const client = {
-      query: vi.fn(
+      query: jest.fn(
         (
           sql: string,
           bindings: any[],
@@ -126,7 +126,7 @@ describe('runMysql', () => {
     const mockFields2 = [{ name: 'found_rows' }];
     let callCount = 0;
     const client = {
-      query: vi.fn(
+      query: jest.fn(
         (
           sql: string,
           bindings: any[],
@@ -172,7 +172,7 @@ describe('runMysql', () => {
     ];
     const mockFields = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
     const client = {
-      query: vi.fn((sql: string, bindings: any[]) => {
+      query: jest.fn((sql: string, bindings: any[]) => {
         return Promise.resolve([mockResults, mockFields]);
       }),
     };
@@ -199,7 +199,7 @@ describe('runMysql', () => {
     const mockFields2 = [{ name: 'found_rows' }];
     let callCount = 0;
     const client = {
-      query: vi.fn((sql: string, bindings: any[]) => {
+      query: jest.fn((sql: string, bindings: any[]) => {
         if (++callCount === 1) {
           return Promise.resolve([mockResults1, mockFields1]);
         }
@@ -237,7 +237,7 @@ describe('runMysql', () => {
     const mockFields2 = [{ name: 'found_rows' }];
     let callCount = 0;
     const client = {
-      query: vi.fn((sql: string, bindings: any[]) => {
+      query: jest.fn((sql: string, bindings: any[]) => {
         if (++callCount === 1) {
           return Promise.resolve([mockResults1, mockFields1]);
         }
@@ -269,7 +269,7 @@ describe('runMysql', () => {
   });
   it('should handle errors (promises)', async () => {
     const client = {
-      query: vi.fn((sql: string, bindings: any[]) => {
+      query: jest.fn((sql: string, bindings: any[]) => {
         return Promise.reject('Test Test');
       }),
     };

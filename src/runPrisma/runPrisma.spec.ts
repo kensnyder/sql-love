@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, jest } from 'bun:test';
 import SelectBuilder from '../SelectBuilder/SelectBuilder';
 import { runPrisma, runPrismaWithCount } from './runPrisma';
 
@@ -9,12 +9,12 @@ describe('runPrisma', () => {
       { id: 2, name: 'Jane', dept: 'Marketing' },
     ];
     const prisma = {
-      $queryRawUnsafe: vi.fn(() => mockResults),
+      $queryRawUnsafe: jest.fn(() => mockResults),
     };
     const query = new SelectBuilder('SELECT * FROM users');
     query.where('dept', 'Marketing');
     // @ts-expect-error
-    const results = await runPrisma(prisma, query);
+    const results = await runPrisma(prisma, query, { engine: 'mysql' });
     expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith(
       'SELECT\n  *\nFROM users\nWHERE dept = ?',
       'Marketing'
@@ -29,7 +29,7 @@ describe('runPrisma', () => {
     const mockResults2 = [{ found_rows: 9 }];
     let callCount = 0;
     const prisma = {
-      $queryRawUnsafe: vi.fn(() => {
+      $queryRawUnsafe: jest.fn(() => {
         if (++callCount === 1) {
           return mockResults1;
         }
@@ -43,10 +43,12 @@ describe('runPrisma', () => {
     const { records, total, pagination } = await runPrismaWithCount(
       // @ts-expect-error
       prisma,
-      query
+      query,
+      { engine: 'mysql' }
     );
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][0]).toBe(
+      // @ts-expect-error
       'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
     );
     // @ts-expect-error
@@ -66,7 +68,7 @@ describe('runPrisma', () => {
   });
   it('should handle when recordset is empty', async () => {
     const prisma = {
-      $queryRawUnsafe: vi.fn(() => []),
+      $queryRawUnsafe: jest.fn(() => []),
     };
     const query = new SelectBuilder('SELECT * FROM users')
       .where('dept', 'Marketing')
@@ -75,10 +77,12 @@ describe('runPrisma', () => {
     const { records, total, pagination } = await runPrismaWithCount(
       // @ts-expect-error
       prisma,
-      query
+      query,
+      { engine: 'mysql' }
     );
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][0]).toBe(
+      // @ts-expect-error
       'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
     );
     // @ts-expect-error

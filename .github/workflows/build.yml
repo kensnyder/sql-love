@@ -6,25 +6,25 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, latest]
+        bun-version: [1.1.x, 1.2.x, latest]
 
     steps:
       - name: ➡️ Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Set up Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - name: 🧅 Set up Bun ${{ matrix.bun-version }}
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          bun-version: ${{ matrix.bun-version }}
 
       - name: ⬇️ Install dependencies
-        run: npm install
+        run: bun install
 
       - name: 🏃 Run tests
-        run: npm run coverage
+        run: bun run coverage
 
       - name: ☂️ Upload to codecov
-        if: matrix.node-version == 'latest'
+        if: matrix.bun-version == 'latest' && github.ref == 'refs/heads/main'
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true

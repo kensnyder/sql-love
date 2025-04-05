@@ -1,17 +1,17 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.5" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.6" width="250" height="208" />
 
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.5)](https://npmjs.com/package/sql-love)
-[![Language](https://badgen.net/static/language/TS?v=1.0.5)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.5)](https://github.com/kensnyder/sql-love/actions)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.5)](https://codecov.io/gh/kensnyder/sql-love)
-[![Gzipped Size](https://badgen.net/bundlephobia/minzip/sql-love?label=minzipped&v=1.0.5)](https://bundlephobia.com/package/sql-love@1.0.5)
-[![Dependency details](https://badgen.net/bundlephobia/dependency-count/sql-love?v=1.0.5)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
-[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.0.5)](https://www.npmjs.com/package/sql-love)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.5)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.6)](https://npmjs.com/package/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.0.6)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.6)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.6)](https://codecov.io/gh/kensnyder/sql-love)
+[![Gzipped Size](https://badgen.net/bundlephobia/minzip/sql-love?label=minzipped&v=1.0.6)](https://bundlephobia.com/package/sql-love@1.0.6)
+[![Dependency details](https://badgen.net/bundlephobia/dependency-count/sql-love?v=1.0.6)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
+[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.0.6)](https://www.npmjs.com/package/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.6)](https://opensource.org/licenses/ISC)
 
-Classes for parsing and building SQL select queries in Node
+Classes for parsing and building SQL select queries in Node/Bun/Deno.
 
 ## Installation
 
@@ -39,6 +39,7 @@ npm install sql-love
   - [toSafeJson functions](#tosafejson)
 - [How to contribute](./CONTRIBUTING.md)
 - [ISC license](./LICENSE.md)
+- [Hello Bun](#hello-bun)
 
 ## SelectBuilder
 
@@ -629,3 +630,8 @@ toSafeJsonString(records);
 
 // As you can see, BigInt values too big for Number are converted to strings
 ```
+
+## Hello Bun
+
+This code repository uses [Bun](https://bun.sh) for a package manager, test
+runner and builder.
