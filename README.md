@@ -1,15 +1,15 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.0.6" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.1.0" width="250" height="208" />
 
 # sql-love
 
-[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.0.6)](https://npmjs.com/package/sql-love)
-[![Language](https://badgen.net/static/language/TS?v=1.0.6)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.0.6)](https://github.com/kensnyder/sql-love/actions)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.0.6)](https://codecov.io/gh/kensnyder/sql-love)
-[![Gzipped Size](https://badgen.net/bundlephobia/minzip/sql-love?label=minzipped&v=1.0.6)](https://bundlephobia.com/package/sql-love@1.0.6)
-[![Dependency details](https://badgen.net/bundlephobia/dependency-count/sql-love?v=1.0.6)](https://www.npmjs.com/package/sql-love?activeTab=dependencies)
-[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.0.6)](https://www.npmjs.com/package/sql-love)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.0.6)](https://opensource.org/licenses/ISC)
+[![NPM Link](https://badgen.net/npm/v/sql-love?v=1.1.0)](https://npmjs.com/package/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.1.0)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.1.0)](https://github.com/kensnyder/sql-love/actions)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.0)](https://codecov.io/gh/kensnyder/sql-love)
+![GzippedSize](https://deno.bundlejs.com/?q=asql-love&badge&v=1.1.0)
+![Dependencies](https://badgen.net/static/dependencies/0/green)
+[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.1.0)](https://www.npmjs.com/package/sql-love)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.0)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Deno.
 
@@ -190,15 +190,16 @@ Use the following methods to build queries. And see
 - `query.having(expression)` - Having an arbitrary expression
 - `query.having(columnValueRecord)` - Add multiple conditions
 - `query.orHaving(expressions)` - Multiple `having()`s joined by OR
-- `query.orderBy(column)` - Add ORDER BY clause
-- `query.sortField(column, mapNames)` - Add ORDER BY clause with mapNames
+- `query.orderBy(column, direction)` - Add ORDER BY clause
+- `query.sortField(column, mapNames, modifier)` - Add ORDER BY clause with mapNames
 - `query.limit(num)` - Limit by the given number
 - `query.offset(num)` - Specify an offset
 - `query.page(num)` - Automatically calculate offset based on limit and page
 - `query.columns(columnNames)` - Add column names to fetch (alias `select()`)
 - `query.column(columnName)` - Add a column name to fetch
-- `query.table(tableName)` - Specify the table in the FROM clause
-- `query.from(tableName)` - Same as above
+- `query.table(tableName)` - Add a table to add to the FROM clause
+- `query.tables(tableNames)` - Add an array of tables to add to the FROM clause
+- `query.from(tableName)` - Alias for `table()`
 - `query.join(expression)` - Add a JOIN expression
 - `query.innerJoin(expression)` - Add an INNER JOIN expression
 - `query.leftJoin(expression)` - Add a LEFT JOIN expression
@@ -213,7 +214,13 @@ Use the following methods to build queries. And see
 ### More examples
 
 ```js
-// The following are equivalent
+// building the FROM clause
+query.column('id');
+query.column('"Media"."postId"');
+query.column('CONCAT(first_name, " ", last_name) AS full_name');
+query.columns(['id', 'first_name', 'last_name']);
+
+// Ways to test against NULL
 query.where('deleted_at', '=', null);
 query.where('deleted_at', '=', undefined);
 query.where('deleted_at', null);
@@ -222,15 +229,16 @@ query.where('deleted_at IS NULL');
 query.where({ deleted_at: null });
 query.where({ deleted_at: undefined });
 
-// the following demonstrate ways to use LIKE
+// Using LIKE
 query.where('name', 'LIKE', 'son');
 query.where('name', 'LIKE ?', 'son');
 query.where('name', 'LIKE ?%', 'son');
 query.where('name', 'LIKE %?', 'son');
 query.where('name', 'LIKE %?%', 'son');
 query.where('name', 'LIKE', '%son%');
+query.where('name', 'ILIKE %?', 'son');
 
-// The following demonstrate ways to use various operators
+// Various operators
 query.where('price', '=', 100);
 query.where('price', '!=', 100);
 query.where('price', '<>', 100);
@@ -243,7 +251,7 @@ query.whereBetween('price', [100, null]); // price > 100
 query.whereBetween('price', [null, 200]); // price < 200
 query.whereBetween('price', [null, null]); // clause is ignored
 
-// The following demonstrate ways to use IN and NOT IN
+// Using IN and NOT IN
 query.where('status', 'IN', ['pending', 'approved']);
 query.where('status', ['pending', 'approved']);
 query.where('status', '=', ['pending', 'approved']);
@@ -254,7 +262,7 @@ query.where({ 'status NOT IN': ['pending', 'approved'] });
 query.where({ 'status !=': ['pending', 'approved'] });
 query.where({ 'status <>': ['pending', 'approved'] });
 
-// the following demonstrates how to use question marks for binding
+// Question marks for binding
 query.where(
   'users.id IN (SELECT user_id FROM roles WHERE customer_id IN (?, ?))',
   [1, 2]
@@ -265,7 +273,7 @@ query.where(
   [1]
 );
 
-// The following demonstrates using objects to specify multiple conditions
+// Multiple conditions
 query.where({
   deleted_at: null,
   'price >': 100,
@@ -277,7 +285,7 @@ query.where({
 
 // Note: .having() supports the same signatures as .where()
 
-// The following demonstrate equivalent ways to use OR
+// Ways to use OR
 query.orWhere([{ approved_at: null }, { denied_at: null }]);
 query.orWhere({ approved_at: null, denied_at: null });
 query.orWhere(['approved_at IS NULL', 'denied_at IS NULL']);
@@ -289,7 +297,7 @@ query.where('(approved_at IS NULL OR denied_at IS NULL)');
 
 // Note: .orHaving() supports the same signatures as .orWhere()
 
-// The following demonstrate joins
+// Joins
 query.innerJoin('phone_numbers p ON p.user_id = u.id');
 query.leftJoin('phone_numbers p ON p.user_id = u.id AND p.type = ?', ['main']);
 query.outerJoin('phone_numbers p ON p.user_id = u.id AND p.type NOT IN(?, ?)', [
@@ -297,10 +305,40 @@ query.outerJoin('phone_numbers p ON p.user_id = u.id AND p.type NOT IN(?, ?)', [
   'cell',
 ]);
 
-// The following demonstrates pagination
-query.limit(10).page(3); // LIMIT 10 OFFSET 20
+// Grouping
 
-// The following demonstrates cloning
+// Sorting
+query.orderBy('modified_at'); // ORDER BY modified_at
+query.orderBy('modified_at', 'DESC'); // ORDER BY modified_at DESC
+query.orderBy('-modified_at'); // ORDER BY modified_at DESC
+query.orderBy('COUNT(*)'); // ORDER BY COUNT(*)
+query.orderBy('COUNT(*)', 'DESC'); // ORDER BY COUNT(*) DESC
+query.orderBy('COUNT(*) DESC'); // ORDER BY COUNT(*) DESC
+query.orderBy('modified_at DESC NULLS LAST'); // ORDER BY modified_at DESC NULLS LAST
+query.orderBy('modified_at USING >'); // ORDER BY modified_at USING >
+
+// Sorting with support for hyphens and mapping
+query.sortField('-modified_at'); // ORDER BY modified_at DESC
+query.sortField('-created', { created: 'created_at' }); // ORDER BY created_at DESC
+query.sortField(
+  '-created_at',
+  {
+    created_at: 'posts.created_timestamp',
+  },
+  'NULLS LAST'
+); // ORDER BY posts.created_timestamp DESC NULLS LAST
+query.sortField('-created', {
+  created: 'created_at NULLS LAST',
+  '-created': 'created_at DESC NULLS LAST',
+}); // ORDER BY created_at DESC NULLS LAST
+query.sortField('-name', {
+  name: 'name COLLATE "jp_JP"',
+}); // ORDER BY name COLLATE "jp_JP" DESC
+
+// Pagination
+query.limit(10).page(3); // "LIMIT 10 OFFSET 20" (or for mssql, "OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY")
+
+// Cloning for creating similar queries
 const query1 = new SelectBuilder();
 query1.where('email', 'john@example.com');
 const query2 = query1.getClone();
@@ -398,10 +436,10 @@ If you need to use SQL keywords in strings, use bindings.
 
 ```js
 // ❌ WILL NOT WORK
-new SelectBuilder(`SELECT id, CONCAT('where ', expr) FROM users`);
+new SelectBuilder(`SELECT id, CONCAT('where ', column) FROM users`);
 
 // ✅ WORKING EQUIVALENT
-new SelectBuilder(`SELECT id, CONCAT(:prefix, expr) FROM users`, {
+new SelectBuilder(`SELECT id, CONCAT(:prefix, column) FROM users`, {
   prefix: 'where ',
 });
 ```
@@ -498,7 +536,9 @@ const grouped = extractGrouped('dept', records);
     { id: 1, name: 'John', dept: 'Marketing' },
     { id: 3, name: 'Tim', dept: 'Marketing' },
   ],
-  Finance: [{ id: 2, name: 'Jane', dept: 'Finance' }],
+  Finance: [
+    { id: 2, name: 'Jane', dept: 'Finance' }
+  ],
 }
 */
 ```

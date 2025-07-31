@@ -708,7 +708,7 @@ export default class SelectBuilder {
   /**
    * Add a WHERE clause with a BETWEEN condition
    * @param column  The column name
-   * @param twoValueArray  The two values to be between
+   * @param twoValueArray  The two values to be between. If the first is null, it will use >= instead. If the second is null, it will use <= instead. If both are null, no criteria will be added
    */
   whereBetween(column: string, twoValueArray: [any, any]) {
     if (!isNullish(twoValueArray[0]) && !isNullish(twoValueArray[1])) {
@@ -792,10 +792,12 @@ export default class SelectBuilder {
    * @param column  The column name or expression to sort by. Include DESC or prefix with - to sort descending
    * @param [direction]  The direction to sort by (ASC or DESC)
    * @example
-   *   query.sortField('modified_at'); // ORDER BY modified_at
-   *   query.sortField('-modified_at'); // ORDER BY modified_at DESC
-   *   query.sortField('COUNT(*)'); // ORDER BY COUNT(*)
-   *   query.sortField('COUNT(*) DESC'); // ORDER BY COUNT(*) DESC
+   *   query.orderBy('modified_at'); // ORDER BY modified_at
+   *   query.orderBy('-modified_at'); // ORDER BY modified_at DESC
+   *   query.orderBy('COUNT(*)'); // ORDER BY COUNT(*)
+   *   query.orderBy('COUNT(*) DESC'); // ORDER BY COUNT(*) DESC
+   *   query.orderBy('modified_at DESC NULLS LAST'); // ORDER BY modified_at DESC NULLS LAST
+   *   query.orderBy('modified_at USING >'); // ORDER BY modified_at USING >
    */
   orderBy(column: string, direction: 'ASC' | 'DESC' = null) {
     if (direction) {
@@ -809,19 +811,44 @@ export default class SelectBuilder {
 
   /**
    * Sort by the given column, with a map of columns to translate
-   * @param fieldName  The file name such as "created_at" or "-created_at" for descending
+   * @param fieldName  The file name such as 'created_at' or '-created_at' for descending
    * @param [mapNames]  Column names to translate from field to column expression
+   * @param [modifier]  Additional clause to append such as 'NULLS LAST' or 'COLLATE "en_US"'
    * @example
    *   query.sortField('-modified_at'); // ORDER BY modified_at DESC
    *   query.sortField('-created', {'created': 'created_at'}); // ORDER BY created_at DESC
+   *   query.sortField('-created', {
+   *     'created': 'created_at NULLS LAST',
+   *     '-created': 'created_at DESC NULLS LAST'
+   *   }); // ORDER BY created_at DESC NULLS LAST
+   *   query.sortField('-name', {
+   *     'name': 'name COLLATE "jp_JP"'
+   *   }); // ORDER BY name COLLATE "jp_JP" DESC
    */
-  sortField(fieldName: string, mapNames: Record<string, string> = {}) {
+  sortField(
+    fieldName: string,
+    mapNames: Record<string, string> = {},
+    modifier = ''
+  ) {
+    if (!fieldName) {
+      return this;
+    }
     let direction = 'ASC' as 'ASC' | 'DESC';
     if (fieldName.startsWith('-')) {
+      if (mapNames[fieldName]) {
+        // map contains special case for descending
+        const maybeModifier = modifier ? ` ${modifier}` : '';
+        this.orderBy(mapNames[fieldName] + maybeModifier);
+        return this;
+      }
+      // no special case: use DESC
       direction = 'DESC';
       fieldName = fieldName.slice(1);
     }
     const column = mapNames[fieldName] || fieldName;
+    if (modifier) {
+      direction += ` ${modifier}`;
+    }
     this.orderBy(column, direction);
     return this;
   }

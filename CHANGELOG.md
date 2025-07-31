@@ -1,5 +1,12 @@
 ## Change Log
 
+### v1.1.0 - 31 Jul 2025
+
+- sortField(): support modifiers
+- sortField(): support hyphenated lookups
+- README.md: Documentation for orderBy() and sortField()
+- Upgrade deps
+
 ### v1.0.5 - 16 Mar 2025
 
 - Upgrade deps

@@ -474,6 +474,54 @@ describe('sortField()', () => {
     );
     expect(bindings).toEqual([]);
   });
+  it('should handle mapping with COLLATE', () => {
+    const query = new SelectBuilder('SELECT * FROM posts');
+    query.sortField('-name', {
+      name: 'name COLLATE "jp_JP"',
+    });
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM posts ORDER BY name COLLATE "jp_JP" DESC'
+    );
+    expect(bindings).toEqual([]);
+  });
+  it('should handle mapping with modifiers', () => {
+    const query = new SelectBuilder('SELECT * FROM posts');
+    query.sortField(
+      '-created_at',
+      {
+        created_at: 'posts.created_timestamp',
+      },
+      'NULLS LAST'
+    );
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM posts ORDER BY posts.created_timestamp DESC NULLS LAST'
+    );
+    expect(bindings).toEqual([]);
+  });
+  it('should handle maps with minuses', () => {
+    const query = new SelectBuilder('SELECT * FROM posts');
+    query.sortField('-created_at', {
+      created_at: 'posts.created_timestamp',
+      '-created_at': 'posts.created_timestamp DESC NULLS LAST',
+    });
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM posts ORDER BY posts.created_timestamp DESC NULLS LAST'
+    );
+    expect(bindings).toEqual([]);
+  });
+  it('should handle null fields', () => {
+    const query = new SelectBuilder('SELECT * FROM posts');
+    query.sortField(null, {
+      created_at: 'posts.created_timestamp',
+      '-created_at': 'posts.created_timestamp DESC NULLS LAST',
+    });
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM posts');
+    expect(bindings).toEqual([]);
+  });
 });
 describe('orderBy()', () => {
   it('should handle simple columns', () => {
@@ -513,6 +561,15 @@ describe('orderBy()', () => {
     query.orderBy('COUNT(*) DESC');
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM posts ORDER BY COUNT(*) DESC');
+    expect(bindings).toEqual([]);
+  });
+  it('should handle NULLS LAST', () => {
+    const query = new SelectBuilder('SELECT * FROM posts');
+    query.orderBy('created_at DESC NULLS LAST');
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM posts ORDER BY created_at DESC NULLS LAST'
+    );
     expect(bindings).toEqual([]);
   });
 });
