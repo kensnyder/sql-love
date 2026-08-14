@@ -98,7 +98,6 @@ export default class Parser {
       const keyword = rawKeyword.toUpperCase().replace(/\s+/g, '_');
       const clause = expressions[i++].trim();
       const handler = `_handle${keyword}`;
-      // @ts-expect-error TypeScript can't know that keyword should point to a valid function
       this[handler]?.(clause);
     }
     this._injectSubQueries(subQueries);

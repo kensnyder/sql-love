@@ -278,7 +278,6 @@ export default class SelectBuilder {
         prop += 's';
       }
       const isScalar = ['limit', 'offset', 'page'].indexOf(fieldOrFields) > -1;
-      // @ts-expect-error TypeScript can't know that these are valid props
       this[prop] = isScalar ? null : [];
     } else {
       this._options = [];

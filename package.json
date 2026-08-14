@@ -1,6 +1,6 @@
 {
   "name": "sql-love",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Build SQL queries with JavaScript",
   "type": "module",
   "engines": {
@@ -21,11 +21,12 @@
     "test-watch": "bun test --watch",
     "coverage": "bun test --coverage",
     "coverage-lcov": "bun test --coverage --coverage-reporter=lcov",
-    "build": "bun run build:clean && bun run build:dts && bun run build:esm && bun run build:cjs",
-    "build:clean": "rm -Rf dist/ && mkdir dist && touch dist/.gitkeep",
-    "build:dts": "yes | bunx dts-bundle-generator -o dist/index.d.ts index.ts",
-    "build:esm": "bun build index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs",
-    "build:cjs": "bun build index.ts --bundle --platform=node --format=cjs --outfile=dist/index.cjs"
+    "build": "npm run build:clean && npm run build:dts && npm run build:esm && npm run build:cjs && npm run build:gzip-size",
+    "build:clean": "rm -Rf dist/ && mkdir dist",
+    "build:dts": "yes | bunx dts-bundle-generator --no-check --project tsconfig.bundle-generator.json -o dist/index.d.ts ./index.ts",
+    "build:esm": "bunx esbuild ./index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.mjs",
+    "build:cjs": "bunx esbuild ./index.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/index.cjs",
+    "build:gzip-size": "echo 'gzipped savings and size:' && gzip -cv dist/index.mjs | wc -c"
   },
   "files": [
     "dist",
@@ -53,8 +54,9 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "latest",
+    "dts-bundle-generator": "9.5.1",
     "prettier": "3.9.6",
     "prettier-plugin-organize-imports": "4.3.0",
-    "typescript": "7.0.2"
+    "typescript": "5.9.3"
   }
 }

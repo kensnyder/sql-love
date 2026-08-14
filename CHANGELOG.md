@@ -1,6 +1,6 @@
 ## Change Log
 
-### v1.1.1 - 14 Aug 2026
+### v1.1.2 - 14 Aug 2026
 
 - Fix `whereBetween` with strings
 - Upgrade Deps
