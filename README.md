@@ -4,11 +4,9 @@
 
 [![NPM Link](https://badgen.net/npm/v/sql-love?v=1.1.0)](https://npmjs.com/package/sql-love)
 [![Language](https://badgen.net/static/language/TS?v=1.1.0)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Build Status](https://github.com/kensnyder/sql-love/actions/workflows/node.js.yml/badge.svg?v=1.1.0)](https://github.com/kensnyder/sql-love/actions)
 [![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.0)](https://codecov.io/gh/kensnyder/sql-love)
-![GzippedSize](https://deno.bundlejs.com/?q=asql-love&badge&v=1.1.0)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
-[![Tree shakeable](https://badgen.net/bundlephobia/tree-shaking/sql-love?v=1.1.0)](https://www.npmjs.com/package/sql-love)
+![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
 [![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.0)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Deno.
@@ -68,7 +66,7 @@ if (areaCode) {
 }
 query.sort(sortField);
 query.limit(limitTo);
-const { sql, bindings } = query.compile();
+const { sql, bindings } = query.compile({ engine: 'pg' });
 
 //
 // Then execute the SQL in your preferred client:

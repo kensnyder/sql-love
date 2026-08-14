@@ -37,9 +37,9 @@ export default class Parser {
    * @private
    */
   _extractSubQueries(sql: string) {
-    const subQueries = {};
+    const subQueries: Record<string, string> = {};
     let i = 0;
-    const extractor = $0 => {
+    const extractor = ($0: string) => {
       const placeholder = `~~SUBQUERY_${i++}~~`;
       subQueries[placeholder] = $0;
       return placeholder;
@@ -59,10 +59,10 @@ export default class Parser {
    * @private
    */
   _injectSubQueries(subQueries: Record<string, string>) {
-    const replacer = $0 => {
+    const replacer = ($0: string) => {
       return subQueries[$0] || $0;
     };
-    const mapper = clause => {
+    const mapper = (clause: string) => {
       return clause.replace(/~~SUBQUERY_\d+~~/g, replacer);
     };
     this.query._columns = this.query._columns.map(replacer);
@@ -98,7 +98,8 @@ export default class Parser {
       const keyword = rawKeyword.toUpperCase().replace(/\s+/g, '_');
       const clause = expressions[i++].trim();
       const handler = `_handle${keyword}`;
-      this[handler](clause);
+      // @ts-expect-error TypeScript can't know that keyword should point to a valid function
+      this[handler]?.(clause);
     }
     this._injectSubQueries(subQueries);
     return true;

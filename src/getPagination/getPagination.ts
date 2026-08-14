@@ -27,8 +27,9 @@ export default function getPagination(
     total === 0 || perPage === null ? 0 : Math.ceil(total / perPage) || 0;
   const isFirst = page === 1;
   const isLast = numPages > 0 && page === numPages;
-  const prevPage = numPages === 0 ? null : page - 1 || null;
-  const nextPage = numPages > 0 && page + 1 <= numPages ? page + 1 : null;
+  const prevPage = numPages === 0 || page === null ? null : page - 1 || null;
+  const nextPage =
+    numPages > 0 && page !== null && page + 1 <= numPages ? page + 1 : null;
   return {
     page,
     prevPage,

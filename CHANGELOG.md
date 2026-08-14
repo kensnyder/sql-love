@@ -1,5 +1,10 @@
 ## Change Log
 
+### v1.1.1 - 14 Aug 2026
+
+- Fix `whereBetween` with strings
+- Upgrade Deps
+
 ### v1.1.0 - 31 Jul 2025
 
 - sortField(): support modifiers

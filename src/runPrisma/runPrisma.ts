@@ -49,10 +49,10 @@ export async function runPrismaWithCount<
   records: T;
   total: number;
   pagination: {
-    page: number;
-    prevPage: number;
-    nextPage: number;
-    perPage: number;
+    page: number | null;
+    prevPage: number | null;
+    nextPage: number | null;
+    perPage: number | null;
     numPages: number;
     total: number;
     isFirst: boolean;

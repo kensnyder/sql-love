@@ -26,12 +26,10 @@ export type FieldName =
 export type EngineStyle = 'mssql' | 'mysql' | 'oracle' | 'pg';
 
 export type WhereCriteria =
-  | [string, string, any]
-  | [string, any]
-  | [string]
-  | [Record<string, any>];
+  [string, string, any] | [string, any] | [string] | [Record<string, any>];
 
-const isNullish = v => v === undefined || v === null || v === false || isNaN(v);
+const isNullish = (v: any) =>
+  v === undefined || v === null || v === false || Object.is(NaN, v);
 
 let defaultEngine: EngineStyle = 'mysql';
 
@@ -90,24 +88,24 @@ export default class SelectBuilder {
    * The LIMIT to use
    * @private
    */
-  _limit: number;
+  _limit?: number;
   /**
    * The OFFSET to use
    * @private
    */
-  _offset: number;
+  _offset?: number;
   /**
    * The page used to construct an OFFSET based on the LIMIT
    * @private
    */
-  _page: number;
+  _page?: number;
 
   /**
    * Select constructor
    * @param [sql]  A base SQL query to parse
    * @param [bindings]  Placeholders to bind to the query
    */
-  constructor(sql: string = null, bindings: Record<string, any> = null) {
+  constructor(sql?: string, bindings: Record<string, any> = {}) {
     if (sql) {
       if (bindings) {
         const keys = Object.keys(bindings);
@@ -154,16 +152,16 @@ export default class SelectBuilder {
       this._havings.length ? `HAVING ${this._havings.join('\n  AND ')}` : null,
       this._orderBys.length ? `ORDER BY ${this._orderBys.join(',\n  ')}` : null,
     ];
-    if (this._page > 0) {
+    if (this._page && this._page > 0 && this._limit) {
       const offset = (this._page - 1) * this._limit;
-      lines.push(this._compileOFFSET(engine, offset));
-      lines.push(this._compileLIMIT(engine, this._limit));
+      lines.push(this._compileOFFSET(engine, offset) ?? '');
+      lines.push(this._compileLIMIT(engine, this._limit) ?? '');
     } else {
       if (this._offset) {
-        lines.push(this._compileOFFSET(engine, this._offset));
+        lines.push(this._compileOFFSET(engine, this._offset) ?? '');
       }
       if (this._limit) {
-        lines.push(this._compileLIMIT(engine, this._limit));
+        lines.push(this._compileLIMIT(engine, this._limit) ?? '');
       }
     }
 
@@ -172,13 +170,13 @@ export default class SelectBuilder {
     const bindings: any = [];
     if (engine === 'pg') {
       let idx = bindingIndex;
-      replacer = (_, $1) => {
-        bindings.push(this._bindings[$1]);
+      replacer = (_, $1: string) => {
+        bindings.push(this._bindings[Number($1)]);
         return '$' + idx++;
       };
     } else {
-      replacer = (_, $1) => {
-        bindings.push(this._bindings[$1]);
+      replacer = (_, $1: string) => {
+        bindings.push(this._bindings[Number($1)]);
         return '?';
       };
     }
@@ -218,7 +216,7 @@ export default class SelectBuilder {
   } = {}) {
     const query = this.getFoundRowsQuery(countExpr);
     const { sql, bindings } = query.compile({ engine, bindingIndex });
-    if (this._havings.length === 0) {
+    if (this._havings.length === 0 && this._groupBys.length === 0) {
       return { sql, bindings };
     } else {
       const subquerySql = sql.replace(/\n/g, '\n\t');
@@ -260,7 +258,7 @@ export default class SelectBuilder {
    *   Valid components: option, column, table, where, orWhere, having, groupBy, orderBy, limit, offset, page
    * @return This object
    */
-  reset(fieldOrFields: FieldName | FieldName[] = null) {
+  reset(fieldOrFields?: FieldName | FieldName[]) {
     if (Array.isArray(fieldOrFields)) {
       fieldOrFields.forEach(name => this.reset(name));
       return this;
@@ -280,6 +278,7 @@ export default class SelectBuilder {
         prop += 's';
       }
       const isScalar = ['limit', 'offset', 'page'].indexOf(fieldOrFields) > -1;
+      // @ts-expect-error TypeScript can't know that these are valid props
       this[prop] = isScalar ? null : [];
     } else {
       this._options = [];
@@ -290,9 +289,9 @@ export default class SelectBuilder {
       this._groupBys = [];
       this._havings = [];
       this._orderBys = [];
-      this._limit = null;
-      this._offset = null;
-      this._page = null;
+      this._limit = undefined;
+      this._offset = undefined;
+      this._page = undefined;
       this._bindings = [];
     }
     return this;
@@ -329,15 +328,15 @@ export default class SelectBuilder {
       clone._options = [];
       clone._groupBys = [];
       clone._orderBys = [];
-      clone._limit = null;
-      clone._offset = null;
-      clone._page = null;
+      clone._limit = undefined;
+      clone._offset = undefined;
+      clone._page = undefined;
       return clone;
     } else {
       const subquery = this.getClone();
-      subquery._limit = null;
-      subquery._offset = null;
-      subquery._page = null;
+      subquery._limit = undefined;
+      subquery._offset = undefined;
+      subquery._page = undefined;
       return subquery;
     }
   }
@@ -623,7 +622,7 @@ export default class SelectBuilder {
       // e.g. ["status LIKE ?%", 10]
       value = operator;
       const parts = column.split(' ');
-      column = parts.shift();
+      column = parts.shift() ?? '';
       operator = parts.join(' ');
     }
     if (typeof operator !== 'string' || operator === '') {
@@ -730,7 +729,7 @@ export default class SelectBuilder {
   _orConditions(
     conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
   ) {
-    const items = [];
+    const items: string[] = [];
     if (Array.isArray(conditions)) {
       for (const condition of conditions) {
         if (Array.isArray(condition)) {
@@ -741,7 +740,7 @@ export default class SelectBuilder {
       }
     } else {
       for (const [key, value] of Object.entries(conditions)) {
-        const one = [];
+        const one: string[] = [];
         this._conditions(one, [key, value]);
         items.push(one[0]);
       }
@@ -799,7 +798,7 @@ export default class SelectBuilder {
    *   query.orderBy('modified_at DESC NULLS LAST'); // ORDER BY modified_at DESC NULLS LAST
    *   query.orderBy('modified_at USING >'); // ORDER BY modified_at USING >
    */
-  orderBy(column: string, direction: 'ASC' | 'DESC' = null) {
+  orderBy(column: string, direction?: 'ASC' | 'DESC') {
     if (direction) {
       this._orderBys.push(`${column} ${direction}`);
     } else {
@@ -826,11 +825,11 @@ export default class SelectBuilder {
    *   }); // ORDER BY name COLLATE "jp_JP" DESC
    */
   sortField(
-    fieldName: string,
+    fieldName: any,
     mapNames: Record<string, string> = {},
     modifier = ''
   ) {
-    if (!fieldName) {
+    if (typeof fieldName !== 'string' || fieldName === '') {
       return this;
     }
     let direction = 'ASC' as 'ASC' | 'DESC';
@@ -849,7 +848,7 @@ export default class SelectBuilder {
     if (modifier) {
       direction += ` ${modifier}`;
     }
-    this.orderBy(column, direction);
+    this.orderBy(column, direction!);
     return this;
   }
 

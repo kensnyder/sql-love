@@ -27,7 +27,7 @@ export default function extractLookup<
       );
     }
     idx++;
-    lookup[String(record[keyField])] = record[valueField];
+    lookup[record[keyField] as T[number][K]] = record[valueField];
   }
   return lookup;
 }

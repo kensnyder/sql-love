@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import SelectBuilder from './SelectBuilder';
 
-const trim = s => s.replace(/\s+/g, ' ').trim();
+const trim = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 describe('class', () => {
   it('should be instantiable', () => {
@@ -444,6 +444,15 @@ describe('whereBetween()', () => {
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM users');
     expect(bindings).toEqual([]);
+  });
+  it('should handle whereBetween with strings', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.whereBetween('created_at', ['2026-08-01', '2026-08-31']);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM users WHERE created_at BETWEEN ? AND ?'
+    );
+    expect(bindings).toEqual(['2026-08-01', '2026-08-31']);
   });
 });
 describe('sortField()', () => {
