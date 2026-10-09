@@ -893,3 +893,88 @@ describe('setDefaultEngine()', () => {
     expect(compiled.bindings).toEqual([123]);
   });
 });
+describe('constructor named bindings', () => {
+  const castSql = 'SELECT ROUND(AVG(x)::numeric, 1) AS avg, y::date AS d FROM t';
+  const castPg =
+    'SELECT ROUND(AVG(x)::numeric, 1) AS avg, y::date AS d FROM t WHERE t.uuid = $1';
+  for (const [label, args] of [
+    ['no bindings argument', []],
+    ['empty bindings', [{}]],
+    ['unrelated keys', [{ foo: 1, bar: 2 }]],
+  ] as const) {
+    it(`should leave ::casts alone with ${label}`, () => {
+      const q = new SelectBuilder(castSql, ...(args as [any?]));
+      q.where('t.uuid', 'U');
+      const { sql, bindings } = q.compile({ engine: 'pg' });
+      expect(trim(sql)).toBe(castPg);
+      expect(bindings).toEqual(['U']);
+    });
+  }
+  it('should bind :uuid for pg and mysql', () => {
+    const uuid = 'abc';
+    const q = new SelectBuilder('SELECT * FROM t WHERE t.uuid = :uuid', {
+      uuid,
+    });
+    const pg = q.compile({ engine: 'pg' });
+    expect(trim(pg.sql)).toBe('SELECT * FROM t WHERE t.uuid = $1');
+    expect(pg.bindings).toEqual([uuid]);
+    const my = q.compile({ engine: 'mysql' });
+    expect(trim(my.sql)).toBe('SELECT * FROM t WHERE t.uuid = ?');
+    expect(my.bindings).toEqual([uuid]);
+  });
+  it('should not match ::date but bind :date', () => {
+    const d = new Date(0);
+    const q = new SelectBuilder(
+      'SELECT x::date AS a FROM t WHERE t.created > :date',
+      { date: d }
+    );
+    const { sql, bindings } = q.compile({ engine: 'pg' });
+    expect(trim(sql)).toBe('SELECT x::date AS a FROM t WHERE t.created > $1');
+    expect(bindings).toEqual([d]);
+  });
+  it('should bind exact :user and :userId tokens', () => {
+    const q = new SelectBuilder(
+      'SELECT * FROM t WHERE a = :user AND b = :userId',
+      { user: 'u', userId: 7 }
+    );
+    const { sql, bindings } = q.compile({ engine: 'pg' });
+    expect(trim(sql)).toBe('SELECT * FROM t WHERE a = $1 AND b = $2');
+    expect(bindings).toEqual(['u', 7]);
+  });
+  it('should not match a longer token that merely starts with the key', () => {
+    const q = new SelectBuilder('SELECT * FROM t WHERE a = :idempotencyKey', {
+      id: 1,
+    });
+    const { sql, bindings } = q.compile({ engine: 'pg' });
+    expect(trim(sql)).toBe('SELECT * FROM t WHERE a = :idempotencyKey');
+    expect(bindings).toEqual([]);
+  });
+  it('should escape regex metacharacters in keys', () => {
+    const make = () =>
+      new SelectBuilder('SELECT * FROM t WHERE a = :axb AND b = :a.b', {
+        'a.b': 1,
+      });
+    expect(make).not.toThrow();
+    const { sql, bindings } = make().compile({ engine: 'pg' });
+    expect(trim(sql)).toBe('SELECT * FROM t WHERE a = :axb AND b = $1');
+    expect(bindings).toEqual([1]);
+  });
+  it('should leave time literals and JSON paths alone', () => {
+    const base = `SELECT '12:30' AS t, data->'$.a:b' AS j FROM t`;
+    for (const bindings of [undefined, {}, { foo: 1 }]) {
+      const q = new SelectBuilder(base, bindings);
+      const out = q.compile({ engine: 'pg' });
+      expect(trim(out.sql)).toBe(base);
+      expect(out.bindings).toEqual([]);
+    }
+  });
+  it('should not use the constructor regex for ? placeholders', () => {
+    const q = new SelectBuilder('SELECT x::numeric FROM t');
+    q.where('a', 1);
+    q.join('u ON u.id = t.id AND u.k = ?', [5]);
+    q.having('COUNT(*) > ?', 2);
+    const { sql, bindings } = q.compile({ engine: 'pg' });
+    expect(sql).toContain('x::numeric');
+    expect(bindings).toEqual([5, 1, 2]);
+  });
+});

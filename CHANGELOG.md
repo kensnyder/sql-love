@@ -1,5 +1,10 @@
 ## Change Log
 
+### v1.1.5 - 9 Oct 2026
+
+- Fix regression where a SQL string with no constructor bindings had every colon (e.g. `::numeric`) replaced with a binding
+- Constructor named bindings now ignore `::casts` and only match whole `:name` tokens
+
 ### v1.1.4 - 9 Oct 2026
 
 - `sortField()` now only accepts field names present in `mapNames`; unknown fields emit a `console.warn` and add no ORDER BY clause (prevents SQL injection from unsanitized input)

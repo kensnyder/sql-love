@@ -1,13 +1,13 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.1.4" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.1.5" width="250" height="208" />
 
 # sql-love
 
-[![Language](https://badgen.net/static/language/TS?v=1.1.4)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.4)](https://codecov.io/gh/kensnyder/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.1.5)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.5)](https://codecov.io/gh/kensnyder/sql-love)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
 ![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
 ![Gzip Size](https://badgen.net/static/gzip%20size/9kb/blue)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.4)](https://opensource.org/licenses/ISC)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.5)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Deno.
 

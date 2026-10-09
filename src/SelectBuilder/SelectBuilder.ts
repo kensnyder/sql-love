@@ -107,9 +107,13 @@ export default class SelectBuilder {
    */
   constructor(sql?: string, bindings: Record<string, any> = {}) {
     if (sql) {
-      if (bindings) {
-        const keys = Object.keys(bindings);
-        const regexp = new RegExp(`:(${keys.join('|')})`, 'g');
+      const keys = bindings ? Object.keys(bindings) : [];
+      if (keys.length > 0) {
+        const names = keys
+          .sort((a, b) => b.length - a.length)
+          .map(key => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('|');
+        const regexp = new RegExp(`(?<!:):(${names})\\b`, 'g');
         sql = sql.replace(regexp, ($0, $1) => {
           this._bindings.push(bindings[$1]);
           return `__BOUND_${this._bindings.length - 1}__`;
