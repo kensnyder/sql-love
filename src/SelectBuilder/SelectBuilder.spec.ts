@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import SelectBuilder from './SelectBuilder';
 
 const trim = (s: string) => s.replace(/\s+/g, ' ').trim();
@@ -198,6 +198,17 @@ describe('where() with arguments', () => {
       'SELECT * FROM users WHERE SUBSTR(prefs, ?, ?) = role'
     );
     expect(bindings).toEqual([1, 4]);
+  });
+  it('should handle subqueries with empty bindings', () => {
+    // .where('col IN (SELECT ...)', [])
+    const query = new SelectBuilder();
+    query.table('contact');
+    query.where('mobile_id IN (SELECT id FROM phone)', []);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM contact WHERE mobile_id IN (SELECT id FROM phone)'
+    );
+    expect(bindings).toEqual([]);
   });
   it('should handle where with objects', () => {
     const query = new SelectBuilder();
@@ -458,19 +469,51 @@ describe('whereBetween()', () => {
 describe('sortField()', () => {
   it('should handle simple columns', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
-    query.sortField('posts.created_at');
+    query.sortField('created_at', { created_at: 'posts.created_at' });
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM posts ORDER BY posts.created_at ASC');
     expect(bindings).toEqual([]);
   });
   it('should handle minus signs', () => {
     const query = new SelectBuilder('SELECT * FROM posts');
-    query.sortField('-posts.created_at');
+    query.sortField('-created_at', { created_at: 'posts.created_at' });
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe(
       'SELECT * FROM posts ORDER BY posts.created_at DESC'
     );
     expect(bindings).toEqual([]);
+  });
+  it('should warn and skip fields not in mapNames', () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const query = new SelectBuilder('SELECT * FROM posts');
+      query.sortField('id; DROP TABLE posts', {
+        created_at: 'posts.created_at',
+      });
+      query.sortField('-id; DROP TABLE posts', {
+        created_at: 'posts.created_at',
+      });
+      query.sortField('posts.created_at');
+      const { sql, bindings } = query.compile();
+      expect(trim(sql)).toBe('SELECT * FROM posts');
+      expect(bindings).toEqual([]);
+      expect(warn).toHaveBeenCalledTimes(3);
+      expect(warn.mock.calls[0][0]).toContain('id; DROP TABLE posts');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+  it('should ignore inherited object properties', () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const query = new SelectBuilder('SELECT * FROM posts');
+      query.sortField('constructor', { created_at: 'posts.created_at' });
+      const { sql } = query.compile();
+      expect(trim(sql)).toBe('SELECT * FROM posts');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
   it('should handle mapping', () => {
     const query = new SelectBuilder('SELECT * FROM posts');

@@ -1,13 +1,13 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.1.2" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.1.4" width="250" height="208" />
 
 # sql-love
 
-[![Language](https://badgen.net/static/language/TS?v=1.1.2)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.2)](https://codecov.io/gh/kensnyder/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.1.4)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.1.4)](https://codecov.io/gh/kensnyder/sql-love)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
 ![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
 ![Gzip Size](https://badgen.net/static/gzip%20size/9kb/blue)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.2)](https://opensource.org/licenses/ISC)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.1.4)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Deno.
 
@@ -189,7 +189,7 @@ Use the following methods to build queries. And see
 - `query.having(columnValueRecord)` - Add multiple conditions
 - `query.orHaving(expressions)` - Multiple `having()`s joined by OR
 - `query.orderBy(column, direction)` - Add ORDER BY clause
-- `query.sortField(column, mapNames, modifier)` - Add ORDER BY clause with mapNames
+- `query.sortField(field, mapNames, modifier)` - Add ORDER BY clause for an allowed field in mapNames
 - `query.limit(num)` - Limit by the given number
 - `query.offset(num)` - Specify an offset
 - `query.page(num)` - Automatically calculate offset based on limit and page
@@ -316,8 +316,11 @@ query.orderBy('modified_at DESC NULLS LAST'); // ORDER BY modified_at DESC NULLS
 query.orderBy('modified_at USING >'); // ORDER BY modified_at USING >
 
 // Sorting with support for hyphens and mapping
-query.sortField('-modified_at'); // ORDER BY modified_at DESC
+// Only fields present in mapNames are allowed, so field names may safely
+// come from user input (e.g. a "?sort=-created" query string param).
+// Unknown fields emit a console.warn and add no ORDER BY clause.
 query.sortField('-created', { created: 'created_at' }); // ORDER BY created_at DESC
+query.sortField('-foo', { created: 'created_at' }); // console.warn; no ORDER BY added
 query.sortField(
   '-created_at',
   {

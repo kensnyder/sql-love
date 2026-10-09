@@ -603,7 +603,6 @@ export default class SelectBuilder {
     } else if (
       numArgs === 2 &&
       Array.isArray(operator) &&
-      operator.length > 0 &&
       substrCount(column, '?') === operator.length
     ) {
       // column is a string with question marks and operator is an array of replacements
@@ -808,13 +807,16 @@ export default class SelectBuilder {
   }
 
   /**
-   * Sort by the given column, with a map of columns to translate
-   * @param fieldName  The file name such as 'created_at' or '-created_at' for descending
-   * @param [mapNames]  Column names to translate from field to column expression
+   * Sort by the given field, with a map of allowed fields to column expressions.
+   * Only field names present in mapNames are allowed; anything else emits a
+   * console.warn and adds no ORDER BY clause. This prevents SQL injection when
+   * fieldName comes from user input.
+   * @param fieldName  The field name such as 'created' or '-created' for descending
+   * @param mapNames  Allowed field names mapped to column expressions
    * @param [modifier]  Additional clause to append such as 'NULLS LAST' or 'COLLATE "en_US"'
    * @example
-   *   query.sortField('-modified_at'); // ORDER BY modified_at DESC
    *   query.sortField('-created', {'created': 'created_at'}); // ORDER BY created_at DESC
+   *   query.sortField('-foo', {'created': 'created_at'}); // console.warn; no ORDER BY added
    *   query.sortField('-created', {
    *     'created': 'created_at NULLS LAST',
    *     '-created': 'created_at DESC NULLS LAST'
@@ -843,7 +845,13 @@ export default class SelectBuilder {
       direction = 'DESC';
       fieldName = fieldName.slice(1);
     }
-    const column = mapNames[fieldName] || fieldName;
+    if (!Object.prototype.hasOwnProperty.call(mapNames, fieldName)) {
+      console.warn(
+        `SelectBuilder: sortField() ignoring unknown field "${fieldName.slice(0, 100)}"`
+      );
+      return this;
+    }
+    const column = mapNames[fieldName];
     if (modifier) {
       direction += ` ${modifier}`;
     }

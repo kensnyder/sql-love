@@ -1,5 +1,15 @@
 ## Change Log
 
+### v1.1.4 - 9 Oct 2026
+
+- `sortField()` now only accepts field names present in `mapNames`; unknown fields emit a `console.warn` and add no ORDER BY clause (prevents SQL injection from unsanitized input)
+- Upgrade Deps
+
+### v1.1.3 - 14 Aug 2026
+
+- Fix subqueries with empty bindings
+- Upgrade Deps
+
 ### v1.1.2 - 14 Aug 2026
 
 - Fix `whereBetween` with strings

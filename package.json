@@ -1,6 +1,6 @@
 {
   "name": "sql-love",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "Build SQL queries with JavaScript",
   "type": "module",
   "engines": {
@@ -55,7 +55,7 @@
     "@types/bun": "latest",
     "@types/node": "latest",
     "dts-bundle-generator": "9.5.1",
-    "prettier": "3.9.6",
+    "prettier": "3.9.9",
     "prettier-plugin-organize-imports": "4.3.0",
     "typescript": "5.9.3"
   }
