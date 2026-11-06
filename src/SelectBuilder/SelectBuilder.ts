@@ -37,6 +37,22 @@ let defaultEngine: EngineStyle = 'mysql';
  * Build a select query
  * Class Select
  */
+/**
+ * Operators that may trail a column name in the 2-argument form of where()
+ * e.g. "price >" or "status NOT IN"
+ */
+const trailingOperatorRegex =
+  /\s(=|!=|<>|<=|>=|<|>|(?:NOT\s+)?IN|(?:NOT\s+)?I?LIKE(?:\s+%?\??%?)?|(?:NOT\s+)?BETWEEN)$/i;
+
+/**
+ * Return true if the given string is a stand-alone expression such as
+ * "deleted_at IS NULL" or "id IN (SELECT id FROM phone)" rather than
+ * a bare column name ("id") or a column plus operator ("price >")
+ */
+function isStandaloneExpression(column: string) {
+  return /\s/.test(column) && !trailingOperatorRegex.test(column);
+}
+
 export default class SelectBuilder {
   /**
    * The list of values to bind to the query
@@ -589,6 +605,8 @@ export default class SelectBuilder {
    *   this._conditions(this._wheres, ['price', '=', [10,20]]); // `price` IN(10,20)
    *   this._conditions(this._wheres, ['price', 'IN', [10,20]]); // `price` IN(10,20)
    *   this._conditions(this._wheres, ['price', 'NOT IN', [10,20]]); // `price` NOT IN(10,20)
+   *   this._conditions(this._wheres, ['price', 'IN', []]); // (condition omitted)
+   *   this._conditions(this._wheres, ['price', 'NOT IN', []]); // (condition omitted)
    */
   _conditions(collection: string[], criteria: WhereCriteria) {
     const numArgs = criteria.length;
@@ -607,10 +625,14 @@ export default class SelectBuilder {
     } else if (
       numArgs === 2 &&
       Array.isArray(operator) &&
-      substrCount(column, '?') === operator.length
+      substrCount(column, '?') === operator.length &&
+      (operator.length > 0 || isStandaloneExpression(column))
     ) {
       // column is a string with question marks and operator is an array of replacements
       // e.g. query.where('SUBSTR(prefs, ?, ?) = role', [1, 4]);
+      // or a stand-alone expression with no placeholders
+      // e.g. query.where('mobile_id IN (SELECT id FROM phone)', []);
+      // (but not a bare column with an empty array, e.g. query.where('id', []))
       const values = operator;
       const sql = column.replace(/\?/g, () => {
         this._bindings.push(values.shift());
@@ -663,6 +685,10 @@ export default class SelectBuilder {
       );
     } else if (Array.isArray(value)) {
       // an array of values should be IN or NOT IN
+      if (value.length === 0) {
+        // "IN()" is invalid SQL, so omit the condition entirely
+        return this;
+      }
       const inVals = [];
       for (let i = 0; i < value.length; i++) {
         inVals.push(`__BOUND_${this._bindings.length}__`);
@@ -744,7 +770,9 @@ export default class SelectBuilder {
       for (const [key, value] of Object.entries(conditions)) {
         const one: string[] = [];
         this._conditions(one, [key, value]);
-        items.push(one[0]);
+        if (one.length > 0) {
+          items.push(one[0]);
+        }
       }
     }
     const joined = items.join(' OR ');
@@ -764,7 +792,9 @@ export default class SelectBuilder {
     conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
   ) {
     const joined = this._orConditions(conditions);
-    this.where(`(${joined})`);
+    if (joined !== '') {
+      this.where(`(${joined})`);
+    }
     return this;
   }
 
@@ -776,7 +806,9 @@ export default class SelectBuilder {
     conditions: WhereCriteria[] | Record<string, any>[] | Record<string, any>
   ) {
     const joined = this._orConditions(conditions);
-    this.having(`(${joined})`);
+    if (joined !== '') {
+      this.having(`(${joined})`);
+    }
     return this;
   }
 

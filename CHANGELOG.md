@@ -1,5 +1,9 @@
 ## Change Log
 
+### v1.2.0 - 6 Nov 2026
+
+- Automatically omit `IN`/`NOT IN` conditions when passed binding is an empty array
+
 ### v1.1.5 - 9 Oct 2026
 
 - Fix regression where a SQL string with no constructor bindings had every colon (e.g. `::numeric`) replaced with a binding

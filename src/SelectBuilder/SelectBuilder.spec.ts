@@ -103,6 +103,45 @@ describe('where() with arguments', () => {
     expect(trim(sql)).toBe('SELECT * FROM users WHERE id NOT IN(?, ?)');
     expect(bindings).toEqual([1, 2]);
   });
+  it('should omit IN when array is empty', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('id', 'IN', []);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users');
+    expect(bindings).toEqual([]);
+  });
+  it('should omit automatic IN when array is empty', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('id', []);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users');
+    expect(bindings).toEqual([]);
+  });
+  it('should omit "column operator" pair when array is empty', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('id NOT IN', []);
+    query.where('id !=', []);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users');
+    expect(bindings).toEqual([]);
+  });
+  it('should omit NOT IN when array is empty', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('id', 'NOT IN', []);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users');
+    expect(bindings).toEqual([]);
+  });
+  it('should omit empty IN but keep other conditions', () => {
+    const query = new SelectBuilder('SELECT * FROM users');
+    query.where('is_active', 1);
+    query.where({ status: [], 'age >': 18 });
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe(
+      'SELECT * FROM users WHERE is_active = ? AND age > ?'
+    );
+    expect(bindings).toEqual([1, 18]);
+  });
   it('should handle explicit IN (not an array)', () => {
     const query = new SelectBuilder('SELECT * FROM users');
     query.where('id', 'NOT IN', 456);
@@ -286,6 +325,25 @@ describe('orWhere()', () => {
     const { sql, bindings } = query.compile();
     expect(trim(sql)).toBe('SELECT * FROM users WHERE (a > ? OR b = ?)');
     expect(bindings).toEqual([1, 2]);
+  });
+  it('should omit empty IN inside OR', () => {
+    const query = new SelectBuilder();
+    query.table('users');
+    query.orWhere({ a: [], b: 2 });
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users WHERE (b = ?)');
+    expect(bindings).toEqual([2]);
+  });
+  it('should omit the whole OR when every condition is an empty IN', () => {
+    const query = new SelectBuilder();
+    query.table('users');
+    query.orWhere([
+      ['a', 'IN', []],
+      ['b', []],
+    ]);
+    const { sql, bindings } = query.compile();
+    expect(trim(sql)).toBe('SELECT * FROM users');
+    expect(bindings).toEqual([]);
   });
 });
 describe('having()', () => {
@@ -894,7 +952,8 @@ describe('setDefaultEngine()', () => {
   });
 });
 describe('constructor named bindings', () => {
-  const castSql = 'SELECT ROUND(AVG(x)::numeric, 1) AS avg, y::date AS d FROM t';
+  const castSql =
+    'SELECT ROUND(AVG(x)::numeric, 1) AS avg, y::date AS d FROM t';
   const castPg =
     'SELECT ROUND(AVG(x)::numeric, 1) AS avg, y::date AS d FROM t WHERE t.uuid = $1';
   for (const [label, args] of [
