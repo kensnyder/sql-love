@@ -6,7 +6,7 @@
 [![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=2.0.0)](https://codecov.io/gh/kensnyder/sql-love)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
 ![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
-![Gzip Size](https://badgen.net/static/gzip%20size/9kb/blue)
+![Gzip Size](https://badgen.net/static/gzip%20size/13kb/blue)
 [![ISC License](https://badgen.net/static/license/ISC/green?v=2.0.0)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Workers.
