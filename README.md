@@ -1,13 +1,13 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.2.0" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=1.3.0" width="250" height="208" />
 
 # sql-love
 
-[![Language](https://badgen.net/static/language/TS?v=1.2.0)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.2.0)](https://codecov.io/gh/kensnyder/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=1.3.0)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=1.3.0)](https://codecov.io/gh/kensnyder/sql-love)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
 ![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
 ![Gzip Size](https://badgen.net/static/gzip%20size/9kb/blue)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=1.2.0)](https://opensource.org/licenses/ISC)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=1.3.0)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Workers.
 
@@ -127,12 +127,12 @@ And "bindings" equals:
 ### RDBMS engine
 
 You may specify a RMDBS engine to compile for. The default is `"mysql"`.
-Supported values are `"mysql" | "sqlite" | "pg" | "mssql" | "oracle"`. Each
+Supported values are `"mysql" | "pg" | "mssql" | "oracle"`. Each
 RMDBS engine needs slightly different SQL depending on the syntax for binding
 placeholders and for limit/offset.
 
 ```js
-import { SelectBuilder, setDefaultEngine } from 'sql-love';
+import { SelectBuilder } from 'sql-love';
 
 const query = new SelectBuilder('SELECT * FROM users')
   .limit(10)
@@ -140,19 +140,36 @@ const query = new SelectBuilder('SELECT * FROM users')
   .where('id', 1);
 
 query.compile({ engine: 'mysql' }).sql;
-query.compile({ engine: 'sqlite' }).sql;
-// SELECT * FROM users WHERE id = ? OFFSET 20 LIMIT 10
+// SELECT * FROM users WHERE id = ? LIMIT 10 OFFSET 20
 
 query.compile({ engine: 'pg' }).sql;
-// SELECT * FROM users WHERE id = $1 OFFSET 20 LIMIT 10
+// SELECT * FROM users WHERE id = $1 LIMIT 10 OFFSET 20
+
+query.compile({ engine: 'oracle' }).sql;
+// SELECT * FROM users WHERE id = :1 OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 
 query.compile({ engine: 'mssql' }).sql;
-query.compile({ engine: 'oracle' }).sql;
-// SELECT * FROM users WHERE id = ? OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+// SELECT * FROM users WHERE id = @P1 ORDER BY (SELECT NULL) OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 
-// Or you can specify the default engine to use in the compile function
-setDefaultEngine('pg');
+// Or set the default engine that compile() uses when none is given
+SelectBuilder.setDefaultEngine('pg');
 ```
+
+Placeholders follow the most common driver for each engine: `?` for mysql,
+`$1, $2...` for pg, `:1, :2...` for oracle (node-oracledb) and `@P1, @P2...`
+for mssql (Prisma's documented SQL Server raw query syntax; with mssql/tedious,
+name the inputs `P1`, `P2`...). Pass `bindingIndex` to `compile()` to start
+numbering at something other than 1.
+
+Notes on limit/offset:
+
+- MySQL has no OFFSET without LIMIT, so `query.offset(20)` alone compiles to
+  `LIMIT 18446744073709551615 OFFSET 20` (the documented "no limit" value).
+- Oracle uses the 12c+ `OFFSET m ROWS FETCH NEXT n ROWS ONLY` syntax.
+- SQL Server requires ORDER BY and OFFSET before FETCH, so the query always
+  gets `OFFSET n ROWS` (0 if unset) and, when there is no ORDER BY,
+  `ORDER BY (SELECT NULL)` is added. Add your own `orderBy()` for a
+  deterministic order.
 
 ### SQL injection
 
@@ -220,12 +237,11 @@ query.columns(['id', 'first_name', 'last_name']);
 
 // Ways to test against NULL
 query.where('deleted_at', '=', null);
-query.where('deleted_at', '=', undefined);
 query.where('deleted_at', null);
-query.where('deleted_at', undefined);
 query.where('deleted_at IS NULL');
 query.where({ deleted_at: null });
-query.where({ deleted_at: undefined });
+query.where('deleted_at', '!=', null); // deleted_at IS NOT NULL
+// undefined values throw an Error (use null to compare against NULL)
 
 // Using LIKE
 query.where('name', 'LIKE', 'son');
@@ -269,9 +285,13 @@ query.where(
 );
 query.where(
   'users.id IN (SELECT user_id FROM roles WHERE customer_id = ?)',
-  // even if there is only one placeholder, you must use an array
   [1]
 );
+// with exactly one placeholder, a single non-array value also works
+query.where('users.id IN (SELECT user_id FROM roles WHERE customer_id = ?)', 1);
+query.having('COUNT(*) > ?', 2);
+// (but "tags ?", "tags ?|" and "tags ?&" are Postgres jsonb operators)
+query.where('tags ?', 'admin'); // tags ? $1
 
 // Multiple conditions
 query.where({
@@ -294,6 +314,10 @@ query.orWhere([
   ['denied_at =', null],
 ]);
 query.where('(approved_at IS NULL OR denied_at IS NULL)');
+
+// Inside an array, each object is a group of conditions joined by AND
+query.orWhere([{ status: 'active', 'age >=': 18 }, { role: 'admin' }]);
+// WHERE ((status = ? AND age >= ?) OR role = ?)
 
 // Note: .orHaving() supports the same signatures as .orWhere()
 
@@ -339,7 +363,7 @@ query.sortField('-name', {
 }); // ORDER BY name COLLATE "jp_JP" DESC
 
 // Pagination
-query.limit(10).page(3); // "LIMIT 10 OFFSET 20" (or for mssql, "OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY")
+query.limit(10).page(3); // "LIMIT 10 OFFSET 20" (or for mssql/oracle, "OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY")
 
 // Cloning for creating similar queries
 const query1 = new SelectBuilder();
@@ -367,8 +391,10 @@ const { sql } = query.compileCount({ countExpr: 'DISTINCT externalId' });
 // SELECT COUNT(DISTINCT externalId) AS found_rows FROM users
 ```
 
-With queries that have a `HAVING` clause, the main query will be wrapped in a
-count query.
+With queries that have a `GROUP BY` or `HAVING` clause, or that select
+`DISTINCT` rows, the main query (minus its ORDER BY and LIMIT/OFFSET) will be
+wrapped in a count query, so the result is the number of groups or distinct
+rows. In that case `countExpr` is ignored.
 
 ```js
 const query = new SelectBuilder(`
@@ -398,9 +424,10 @@ SELECT COUNT(*) AS found_rows FROM (
 SelectBuilder has a few other useful methods.
 
 - `query.getClone()` - Get an exact copy of this query object
-- `query.unjoin(tableName)` - Remove a join expression
-- `query.reset(field)` - Reset a single aspect of the query (e.g. 'where' or '
-  having')
+- `query.unjoin(tableName)` - Remove a join expression by its table name (or
+  table name and alias)
+- `query.reset(field)` - Reset a single aspect of the query (e.g. `'where'` or
+  `'having'`)
 - `query.reset(fields)` - Reset a few particular aspects of the query (e.g.
   `['where', 'having']`)
 - `query.reset()` - Reset query to an empty state

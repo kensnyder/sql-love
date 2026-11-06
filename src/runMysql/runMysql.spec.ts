@@ -103,7 +103,7 @@ describe('runMysql', () => {
       query
     );
     expect(client.query.mock.calls[0][0]).toBe(
-      'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
+      'SELECT\n  *\nFROM users\nWHERE dept = ?\nLIMIT 2\nOFFSET 8'
     );
     expect(client.query.mock.calls[0][1]).toEqual(['Marketing']);
     expect(records).toBe(mockResults1);

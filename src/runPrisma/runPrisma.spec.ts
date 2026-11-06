@@ -49,7 +49,7 @@ describe('runPrisma', () => {
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][0]).toBe(
       // @ts-expect-error
-      'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
+      'SELECT\n  *\nFROM users\nWHERE dept = ?\nLIMIT 2\nOFFSET 8'
     );
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][1]).toBe('Marketing');
@@ -83,7 +83,7 @@ describe('runPrisma', () => {
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][0]).toBe(
       // @ts-expect-error
-      'SELECT\n  *\nFROM users\nWHERE dept = ?\nOFFSET 8\nLIMIT 2'
+      'SELECT\n  *\nFROM users\nWHERE dept = ?\nLIMIT 2\nOFFSET 8'
     );
     // @ts-expect-error
     expect(prisma.$queryRawUnsafe.mock.calls[0][1]).toBe('Marketing');
