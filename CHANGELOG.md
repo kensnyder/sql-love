@@ -1,6 +1,6 @@
 ## Change Log
 
-### v1.3.0 - 6 Nov 2026
+### v2.0.0 - 6 Nov 2026
 
 **Breaking changes**
 
@@ -39,12 +39,6 @@
 - `unjoin()` escapes regex characters in table names, matches JOIN case-insensitively, and only matches the start of a join
 - Parser: plain `JOIN`, `NATURAL JOIN`, and newlines/extra spaces between join keywords are now parsed as joins
 - Parser: supports `LIMIT ALL`, named-binding limits/offsets (`LIMIT :n`), `FETCH FIRST n ROWS ONLY`, `OFFSET n ROW(S)`, and a trailing `;`
-
-**Internal**
-
-- Add `_bind()` helper for registering bound values
-- `reset()` uses a typed field map instead of string manipulation
-- Fix swapped JSDoc on `_tables`/`_columns`, error messages, and README examples
 
 ### v1.2.0 - 6 Nov 2026
 
