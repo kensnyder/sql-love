@@ -1,8 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What this is
+## Overview
 
 `sql-love` is a zero-dependency npm library for parsing and building SQL SELECT queries (`SelectBuilder`), plus small result-set utilities. It is developed, tested and built with Bun, and published as ESM + CJS + bundled `.d.ts` in `dist/`.
 
@@ -17,12 +13,14 @@ bun test --watch
 bun run coverage            # CI runs coverage-lcov and uploads to codecov
 bun typecheck               # type-check src/ and index.ts (specs included) via `bun check`
 bun run build               # clean dist, bundle .d.ts, esbuild ESM + CJS, print gzip size
-bunx prettier --write .     # no lint script; Prettier (with organize-imports plugin) is the only formatter
+bun run format              # format the whole repo in place with `bun fmt`
+bun fmt --check             # report unformatted files without writing (exit 1 if any)
+bun fmt src/Parser          # format only the given files or directories
 ```
 
-Run `bun typecheck` after any change to a `.ts` file (source or spec) and before committing or building; it must report no type errors. Nothing else catches them: `bun test` strips types without checking them, the build's d.ts step runs with `--no-check`, and CI does not run the typecheck. Fix errors with real types where possible rather than `any` or `@ts-ignore`. The check uses `tsconfig.json`, which covers `index.ts` and `src/**/*.ts`.
+Run `bun run format` after editing any source, spec, JSON, YAML or Markdown file and before committing; `bun fmt --check` must come back clean. `bun fmt` is Bun's built-in formatter (the `prettier` packages are no longer installed, so do not use `bunx prettier`). It reads `.prettierrc.json` and prints what Prettier 3 would print, including the `prettier-plugin-organize-imports` behavior listed there, which Bun implements natively: imports and re-exports are sorted and unused imports are removed. Keep the style options in `.prettierrc.json` rather than moving them to a `[fmt]` section in `bunfig.toml`: `[fmt]` rejects a `plugins` key, and its `sortImports` option is not equivalent (it groups imports with blank lines and keeps unused ones). It skips anything in `.gitignore`. CI does not check formatting.
 
-There is no lint script.
+Run `bun typecheck` after any change to a `.ts` file (source or spec) and before committing or building; it must report no type errors. Nothing else catches them: `bun test` strips types without checking them, the build's d.ts step runs with `--no-check`, and CI does not run the typecheck. Fix errors with real types where possible rather than `any` or `@ts-ignore`. The check uses `tsconfig.json`, which covers `index.ts` and `src/**/*.ts`.
 
 CI (`.github/workflows/build.yml`) runs the tests on Bun 1.3, 1.4 and latest.
 

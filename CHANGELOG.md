@@ -3,6 +3,7 @@
 ### v2.0.1 - 18 Nov 2026
 
 - Better handle commas in parsed SELECT column lists
+- Migrate from prettier -> bun fmt
 
 ### v2.0.0 - 6 Nov 2026
 
