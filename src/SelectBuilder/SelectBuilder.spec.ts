@@ -1140,6 +1140,51 @@ describe('compileCount()', () => {
     );
     expect(bindings).toEqual([]);
   });
+  it('should ignore countExpr when GROUP BY requires a subquery', () => {
+    const origSql = 'SELECT category, COUNT(*) FROM posts GROUP BY category';
+    const query = new SelectBuilder(origSql);
+    const { sql } = query.compileCount({ countExpr: 'DISTINCT category' });
+    expect(trim(sql)).toBe(
+      `SELECT COUNT(*) AS found_rows FROM ( ${origSql} ) AS subquery_results`
+    );
+    const found = query.getFoundRowsQuery('DISTINCT category');
+    expect(found._columns).toEqual(['category', 'COUNT(*)']);
+    expect(found._groupBys).toEqual(['category']);
+  });
+  it('should count groups for a joined, paginated GROUP BY on every engine', () => {
+    const make = () => {
+      const query = new SelectBuilder(
+        `SELECT s.uuid, COUNT(v.id) AS viewCount
+        FROM shares s
+        INNER JOIN users u ON u.id = s.createdById
+        WHERE s.playlistId = :id
+        GROUP BY s.id, u.id
+        ORDER BY s.id DESC`,
+        { id: 1 }
+      );
+      query.leftJoin('views v ON v.shareId = s.id');
+      query.where('s.active', true);
+      query.limit(100).page(2);
+      return query;
+    };
+    const expected = {
+      mysql: ['?', '?'],
+      pg: ['$3', '$4'],
+      oracle: [':3', ':4'],
+      mssql: ['@P3', '@P4'],
+    } as const;
+    for (const engine of ['mysql', 'pg', 'oracle', 'mssql'] as const) {
+      const [first, second] = expected[engine];
+      const { sql, bindings } = make().compileCount({
+        engine,
+        bindingIndex: 3,
+      });
+      expect(trim(sql)).toBe(
+        `SELECT COUNT(*) AS found_rows FROM ( SELECT s.uuid, COUNT(v.id) AS viewCount FROM shares s INNER JOIN users u ON u.id = s.createdById LEFT JOIN views v ON v.shareId = s.id WHERE s.playlistId = ${first} AND s.active = ${second} GROUP BY s.id, u.id ) AS subquery_results`
+      );
+      expect(bindings).toEqual([1, true]);
+    }
+  });
   it('should keep GROUP BY intact in getFoundRowsQuery()', () => {
     const query = new SelectBuilder(
       'SELECT category, COUNT(*) FROM posts GROUP BY category ORDER BY category LIMIT 5'

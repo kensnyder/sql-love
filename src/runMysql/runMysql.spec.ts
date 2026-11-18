@@ -64,7 +64,7 @@ describe('runMysql', () => {
     try {
       await runMysql(client, query);
     } catch (e) {
-      expect(e.message).toBe('Test Error');
+      expect((e as Error).message).toBe('Test Error');
     }
   });
   it('should run with count', async () => {
@@ -120,7 +120,7 @@ describe('runMysql', () => {
     });
   });
   it('should run when count is 0', async () => {
-    const mockResults1 = [];
+    const mockResults1: any[] = [];
     const mockFields1 = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
     const mockResults2 = [{ found_rows: 0 }];
     const mockFields2 = [{ name: 'found_rows' }];
@@ -231,7 +231,7 @@ describe('runMysql', () => {
     expect(fields).toEqual(mockFields1);
   });
   it('should run with count of zero (promises)', async () => {
-    const mockResults1 = [];
+    const mockResults1: any[] = [];
     const mockFields1 = [{ name: 'id' }, { name: 'name' }, { name: 'dept' }];
     const mockResults2 = [{ found_rows: 0 }];
     const mockFields2 = [{ name: 'found_rows' }];

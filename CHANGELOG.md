@@ -1,5 +1,9 @@
 ## Change Log
 
+### v2.0.1 - 18 Nov 2026
+
+- Better handle commas in parsed SELECT column lists
+
 ### v2.0.0 - 6 Nov 2026
 
 **Breaking changes**
@@ -19,6 +23,9 @@
 - `reset()` throws on unknown field names (including `''`)
 - `orWhere()`/`orHaving()` with an array of objects now ANDs the keys within each object: `[{a, b}, {c}]` => `((a AND b) OR c)`
 - Parsing `LIMIT ?`, `OFFSET ?` or `FETCH NEXT ? ROWS ONLY` with positional placeholders now throws (the limit was previously dropped)
+- `getFoundRowsQuery()` on a query with GROUP BY or DISTINCT/DISTINCTROW now returns the un-paginated query (grouping kept; ORDER BY, limit, offset and page removed; options other than DISTINCT/DISTINCTROW dropped) instead of a standalone `COUNT(...) AS found_rows` query, and `countExpr` is ignored in that case
+  - queries with HAVING already returned the un-paginated query, but now also lose ORDER BY and non-DISTINCT options
+  - callers that ran its result directly as a count should use `compileCount()` or a `*WithCount` runner instead
 
 **Fixes**
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import SelectBuilder from '../SelectBuilder/SelectBuilder';
 
-const trim = s => s.replace(/\s+/g, ' ').trim();
+const trim = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 describe('column handler', () => {
   it('should recognize asterisk', () => {
@@ -111,6 +111,27 @@ describe('column handler', () => {
       "SELECT a, CONCAT(fname, ' ', lname) FROM users"
     );
     expect(query._columns).toEqual(['a', "CONCAT(fname, ' ', lname)"]);
+  });
+  it('should keep the letter "s" next to commas', () => {
+    const query = new SelectBuilder(
+      'SELECT status,sname, address , u.ids,subs FROM users'
+    );
+    expect(query._columns).toEqual([
+      'status',
+      'sname',
+      'address',
+      'u.ids',
+      'subs',
+    ]);
+  });
+  it('should keep the letter "s" next to commas inside parentheses', () => {
+    const query = new SelectBuilder(
+      "SELECT CONCAT(status,suffix), CONCAT(a, ' , ', b) FROM users"
+    );
+    expect(query._columns).toEqual([
+      'CONCAT(status,suffix)',
+      "CONCAT(a, ' , ', b)",
+    ]);
   });
 });
 describe('option handler', () => {

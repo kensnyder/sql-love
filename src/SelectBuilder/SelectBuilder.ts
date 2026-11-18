@@ -394,7 +394,7 @@ export default class SelectBuilder {
     if (!limit && !offset) {
       return [];
     }
-    const lines: string[] = [];
+    const lines: Array<string | undefined> = [];
     if (engine === 'mssql' && this._orderBys.length === 0) {
       // OFFSET/FETCH requires an ORDER BY clause
       lines.push('ORDER BY (SELECT NULL)');

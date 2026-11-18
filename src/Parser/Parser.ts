@@ -104,9 +104,11 @@ export default class Parser {
       const rawKeyword = expressions[i++].trim();
       const keyword = rawKeyword.toUpperCase().replace(/\s+/g, '_');
       const clause = expressions[i++].trim();
-      const handler = `_handle${keyword}`;
-      if (typeof this[handler] === 'function') {
-        this[handler](clause);
+      const handler = (this as unknown as Record<string, unknown>)[
+        `_handle${keyword}`
+      ];
+      if (typeof handler === 'function') {
+        handler.call(this, clause);
       } else if (/JOIN$/.test(keyword)) {
         // join types without a dedicated builder method
         // (e.g. NATURAL JOIN, NATURAL LEFT JOIN, OUTER JOIN)
@@ -123,7 +125,10 @@ export default class Parser {
    * @private
    */
   _handleSELECT(clause: string) {
-    let columns = clause.split(/s*,s*/);
+    // Split on bare commas only: whitespace around commas must survive so that
+    // expressions re-assembled below (e.g. CONCAT(a, ' , ', b)) are unchanged.
+    // Top-level columns are trimmed when added.
+    const columns = clause.split(',');
     // now handle parenthesis expressions that contain commas
     let buffer = '';
     columns.forEach((column, i) => {

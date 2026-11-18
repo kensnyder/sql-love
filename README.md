@@ -1,13 +1,13 @@
-<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=2.0.0" width="250" height="208" />
+<img alt="SQL Love Logo" src="https://github.com/kensnyder/sql-love/raw/main/assets/sql-love-logo.png?v=2.0.1" width="250" height="208" />
 
 # sql-love
 
-[![Language](https://badgen.net/static/language/TS?v=2.0.0)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
-[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=2.0.0)](https://codecov.io/gh/kensnyder/sql-love)
+[![Language](https://badgen.net/static/language/TS?v=2.0.1)](https://github.com/search?q=repo:kensnyder/sql-love++language:TypeScript&type=code)
+[![Code Coverage](https://codecov.io/gh/kensnyder/sql-love/branch/main/graph/badge.svg?v=2.0.1)](https://codecov.io/gh/kensnyder/sql-love)
 ![Dependencies](https://badgen.net/static/dependencies/0/green)
 ![Tree shakeable](https://badgen.net/static/tree%20shakeable/Yes/green)
 ![Gzip Size](https://badgen.net/static/gzip%20size/13kb/blue)
-[![ISC License](https://badgen.net/static/license/ISC/green?v=2.0.0)](https://opensource.org/licenses/ISC)
+[![ISC License](https://badgen.net/static/license/ISC/green?v=2.0.1)](https://opensource.org/licenses/ISC)
 
 Classes for parsing and building SQL select queries in Node/Bun/Workers.
 
@@ -64,7 +64,7 @@ if (email) {
 if (areaCode) {
   query.where('p.phone', 'LIKE ?%', areaCode);
 }
-query.sort(sortField);
+query.sortField(sortField, { name: 'u.lname', email: 'u.email' });
 query.limit(limitTo);
 const { sql, bindings } = query.compile({ engine: 'pg' });
 
@@ -324,10 +324,10 @@ query.orWhere([{ status: 'active', 'age >=': 18 }, { role: 'admin' }]);
 // Joins
 query.innerJoin('phone_numbers p ON p.user_id = u.id');
 query.leftJoin('phone_numbers p ON p.user_id = u.id AND p.type = ?', ['main']);
-query.outerJoin('phone_numbers p ON p.user_id = u.id AND p.type NOT IN(?, ?)', [
-  'home',
-  'cell',
-]);
+query.fullOuterJoin(
+  'phone_numbers p ON p.user_id = u.id AND p.type NOT IN(?, ?)',
+  ['home', 'cell']
+);
 
 // Grouping
 

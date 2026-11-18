@@ -1,6 +1,6 @@
 {
   "name": "sql-love",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Build SQL queries with JavaScript",
   "type": "module",
   "engines": {
@@ -21,6 +21,7 @@
     "test-watch": "bun test --watch",
     "coverage": "bun test --coverage",
     "coverage-lcov": "bun test --coverage --coverage-reporter=lcov",
+    "typecheck": "bun check",
     "build": "npm run build:clean && npm run build:dts && npm run build:esm && npm run build:cjs && npm run build:gzip-size",
     "build:clean": "rm -Rf dist/ && mkdir dist",
     "build:dts": "yes | bunx dts-bundle-generator --no-check --project tsconfig.bundle-generator.json -o dist/index.d.ts ./index.ts",
